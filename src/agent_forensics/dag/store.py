@@ -83,5 +83,18 @@ class EdgeStore:
             params.extend(types)
         return [row[0] for row in self._conn.execute(query, params)]
 
+    def subgraph_edges(self, nodes: Iterable[str]) -> list[tuple[str, str, str]]:
+        """Return (src, dst, edge_type) for edges whose both endpoints are in ``nodes``."""
+        node_list = list(nodes)
+        if not node_list:
+            return []
+        placeholders = ",".join("?" for _ in node_list)
+        query = (
+            f"SELECT src, dst, edge_type FROM edges "
+            f"WHERE src IN ({placeholders}) AND dst IN ({placeholders})"
+        )
+        rows = self._conn.execute(query, node_list + node_list)
+        return [(row[0], row[1], row[2]) for row in rows]
+
     def count(self) -> int:
         return int(self._conn.execute("SELECT COUNT(*) AS n FROM edges").fetchone()[0])

@@ -33,3 +33,26 @@ BEFORE DELETE ON ledger
 BEGIN
   SELECT RAISE(ABORT, 'ledger is append-only: DELETE is forbidden');
 END;
+
+-- Signed Merkle-root checkpoints. Each row commits the root over the first
+-- leaf_count ledger rows. The latest checkpoint is the deletion-detection anchor.
+CREATE TABLE IF NOT EXISTS merkle_checkpoints (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  leaf_count  INTEGER NOT NULL,
+  root        TEXT NOT NULL,        -- blake3:<hex> Merkle root
+  signature   TEXT NOT NULL,        -- ed25519 over the raw root bytes
+  signer_kid  TEXT NOT NULL,
+  created_at  TEXT NOT NULL
+);
+
+CREATE TRIGGER IF NOT EXISTS merkle_checkpoints_no_update
+BEFORE UPDATE ON merkle_checkpoints
+BEGIN
+  SELECT RAISE(ABORT, 'merkle checkpoints are append-only: UPDATE is forbidden');
+END;
+
+CREATE TRIGGER IF NOT EXISTS merkle_checkpoints_no_delete
+BEFORE DELETE ON merkle_checkpoints
+BEGIN
+  SELECT RAISE(ABORT, 'merkle checkpoints are append-only: DELETE is forbidden');
+END;

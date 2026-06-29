@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 
 from agent_forensics.crypto.hashing import b3, b3_raw
+from agent_forensics.merkle.tree import compute_root
 from agent_forensics.model.canonical import canonical_bytes
 from agent_forensics.model.records import Kind, LedgerRecord
 
@@ -43,13 +44,26 @@ def _load_schema() -> str:
 class LedgerStore:
     """An append-only, hash-chained ledger backed by SQLite."""
 
-    def __init__(self, path: Path | str, signer: KeyPair) -> None:
+    def __init__(
+        self,
+        path: Path | str,
+        signer: KeyPair,
+        *,
+        checkpoint_every: int = 1,
+    ) -> None:
         self.path = str(path)
         self._signer = signer
+        self._checkpoint_every = checkpoint_every
         self._conn = sqlite3.connect(self.path)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_load_schema())
         self._conn.commit()
+        # In-memory leaf cache for incremental Merkle root computation, loaded
+        # from any existing rows so reopening a ledger keeps the tree consistent.
+        self._leaves: list[bytes] = [
+            row["entry_hash"].encode("utf-8")
+            for row in self._conn.execute("SELECT entry_hash FROM ledger ORDER BY seq ASC")
+        ]
 
     # -- write path ---------------------------------------------------------
     def append(self, record: R) -> R:
@@ -86,11 +100,36 @@ class LedgerStore:
         )
         self._conn.commit()
 
+        self._leaves.append(entry_hash.encode("utf-8"))
+        if self._checkpoint_every > 0 and len(self._leaves) % self._checkpoint_every == 0:
+            self.checkpoint()
+
         record.entry_hash = entry_hash
         record.prev_hash = prev_hash
         record.signature = signature
         record.signer_kid = self._signer.kid
         return record
+
+    def checkpoint(self) -> str:
+        """Write a signed Merkle-root checkpoint over all current rows; return the root."""
+        root = compute_root(self._leaves)
+        root_hex = "blake3:" + root.hex()
+        signature = self._signer.sign(root)
+        self._conn.execute(
+            """
+            INSERT INTO merkle_checkpoints (leaf_count, root, signature, signer_kid, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                len(self._leaves),
+                root_hex,
+                signature,
+                self._signer.kid,
+                datetime.now(UTC).isoformat(),
+            ),
+        )
+        self._conn.commit()
+        return root_hex
 
     # -- read path ----------------------------------------------------------
     def last_entry_hash(self) -> str | None:

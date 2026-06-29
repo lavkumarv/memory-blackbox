@@ -119,6 +119,9 @@ source = [
     "agent_forensics.dag",
     "agent_forensics.query",
 ]
+# Core packages are docstring-only stubs until their milestones land; silence the
+# "nothing collected yet" warnings until real code (and the >=90% gate) arrive.
+disable_warnings = ["no-data-collected", "module-not-imported"]
 
 [tool.coverage.report]
 show_missing = true

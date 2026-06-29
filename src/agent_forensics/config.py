@@ -1,18 +1,19 @@
-"""Configuration loading for agent-forensics.
+"""Configuration for agent-forensics.
 
-Resolves settings from (in priority order) explicit arguments, environment
-variables (``AGENT_FORENSICS_*``), a TOML config file, then built-in local
-defaults. Defaults are chosen so that ``init`` -> ``demo`` works with zero
-configuration. The full schema is fleshed out in M11; this module currently
-provides the defaults and the resolved-config container.
+Resolves the profile location from an explicit path, then the
+``AGENT_FORENSICS_HOME`` environment variable, then a built-in default. Paths for
+the ledger and signing key are derived from the home directory. Defaults are
+chosen so that ``init`` -> ``demo`` works with zero configuration.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import os
+from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_HOME = Path.home() / ".agent-forensics"
+ENV_HOME = "AGENT_FORENSICS_HOME"
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,13 +21,22 @@ class Config:
     """Resolved runtime configuration."""
 
     home: Path = DEFAULT_HOME
-    ledger_path: Path = field(default=DEFAULT_HOME / "ledger.db")
-    key_path: Path = field(default=DEFAULT_HOME / "signing.key")
     namespace: str = "default"
     async_flush: bool = False
     anchoring: bool = False
 
+    @property
+    def ledger_path(self) -> Path:
+        return self.home / "ledger.db"
 
-def default_config() -> Config:
-    """Return the built-in local default configuration."""
-    return Config()
+    @property
+    def key_path(self) -> Path:
+        return self.home / "signing.key"
+
+
+def resolve_config(home: Path | str | None = None) -> Config:
+    """Resolve the active configuration from an argument, env, or the default."""
+    if home is None:
+        env = os.environ.get(ENV_HOME)
+        home = Path(env) if env else DEFAULT_HOME
+    return Config(home=Path(home))

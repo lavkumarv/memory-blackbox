@@ -27,13 +27,18 @@ core-package coverage at or above 90%.
 
 ## Extending
 
-The two easiest, highest-value contributions:
+The two easiest, highest-value contributions, each ~20–30 lines with a copy-paste
+template in [`examples/extending/`](examples/extending/):
 
-- **Detectors** — implement the `Detector` protocol (`name`, `inspect`) and add
-  it to the pack. ~30 lines plus a test.
+- **Detectors** — implement the `Detector` protocol (`name`, `inspect`) and add it
+  to the pack. Start from [`detector_template.py`](examples/extending/detector_template.py)
+  and map it to a threat category in [`docs/threat-mapping.md`](docs/threat-mapping.md).
 - **Adapters** — supply `WriteMap`/`ReadMap` extractors for a new memory backend.
+  Start from [`adapter_template.py`](examples/extending/adapter_template.py). Capture
+  **reads** too, or `trace` breaks — add a round-trip test.
 
 ## Licensing
 
-By contributing you agree your contributions are licensed under Apache-2.0 and
-sign off your commits (DCO): `git commit -s`.
+By contributing you agree your contributions are licensed under Apache-2.0 and you
+sign off your commits under the [Developer Certificate of Origin](DCO.md):
+`git commit -s`.

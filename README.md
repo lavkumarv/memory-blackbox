@@ -10,7 +10,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Checked with mypy](https://img.shields.io/badge/mypy-strict-2a6db2.svg)](https://mypy-lang.org/)
 [![Linted with ruff](https://img.shields.io/badge/lint-ruff-261230.svg)](https://docs.astral.sh/ruff/)
-[![Tests](https://img.shields.io/badge/tests-176%20passing-brightgreen.svg)](#)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](#)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 </div>
 
@@ -82,9 +83,10 @@ agent-forensics demo                  # plant a poison, then trace it and roll i
 | 🔐 **verify** | Prove the ledger has not been edited, gapped, or had rows removed. |
 | ↩️ **rollback** | Quarantine the poison and its closure — by appending, never deleting. |
 
-It also ships a **detector pack** (missing provenance, prompt-injection, unicode smuggling, write-rate
-bursts, trust scoring, semantic drift) and a `reconcile` command that flags backend entries with no
-ledger record (writes that bypassed capture).
+It also ships a **detector pack** (missing provenance, prompt-injection, unicode smuggling,
+secrets/PII, write-rate bursts, trust scoring, semantic drift) and a `reconcile` command that flags
+backend entries with no ledger record (writes that bypassed capture). Each detector maps to a named
+threat category — see [docs/threat-mapping.md](docs/threat-mapping.md).
 
 ## Integrations
 
@@ -233,12 +235,21 @@ This is **post-incident reconstruction** — provenance, blast radius, and rollb
 attacks at runtime; run it underneath your runtime guardrails. Their product stops the attack; this one
 tells you *which memory caused it and what to roll back.*
 
+**Local-first.** No telemetry; nothing leaves your machine by default. The ledger is a map of
+everything your agent knows, so it stays local and owner-only on disk.
+
+**Compliance evidence.** A tamper-evident, signed record of *what the agent knew and when* is exactly
+what the EU AI Act (Art. 12 logging), the Colorado AI Act, and HIPAA audit trails ask for. See
+[docs/threat-mapping.md](docs/threat-mapping.md).
+
 ## Documentation
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — conceptual model, data model, and algorithms
 - [docs/spec.md](docs/spec.md) — versioned ProvenanceRecord schema
 - [docs/threat-model.md](docs/threat-model.md) — assets, adversary, and mitigations
-- [examples/](examples/) — runnable incident replay, MCP gateway, and sidecar demos
+- [docs/threat-mapping.md](docs/threat-mapping.md) — detectors mapped to OWASP ASI / MITRE ATLAS / CoSAI
+- [ROADMAP.md](ROADMAP.md) — what's built and what's planned
+- [examples/](examples/) — runnable incident replay, MCP gateway, sidecar, and extension templates
 - [SECURITY.md](SECURITY.md) — disclosure policy and the tool's own integrity posture
 
 ## Contributing

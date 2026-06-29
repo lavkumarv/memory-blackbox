@@ -10,6 +10,7 @@ from agent_forensics.detectors import default_pack
 from agent_forensics.detectors.base import DetectorContext
 from agent_forensics.detectors.injection_scan import InjectionScanDetector
 from agent_forensics.detectors.provenance_missing import ProvenanceMissingDetector
+from agent_forensics.detectors.secrets_pii import SecretsPiiDetector
 from agent_forensics.detectors.trust_scoring import TrustScoringDetector
 from agent_forensics.detectors.unicode_smuggling import UnicodeSmugglingDetector
 from agent_forensics.detectors.write_rate import WriteRateDetector
@@ -151,6 +152,31 @@ def test_trust_scoring_quiet_for_clean_source() -> None:
     assert detector.inspect(rec, rec.content, _ctx()) == []
 
 
+# -- secrets_pii ------------------------------------------------------------
+def test_secrets_pii_flags_secret_high() -> None:
+    text = "here is the key AKIAIOSFODNN7EXAMPLE for the bucket"
+    rec = _record(text, Source(source_type=SourceType.tool_output))
+    findings = SecretsPiiDetector().inspect(rec, text, _ctx())
+    assert findings and findings[0].severity is Severity.HIGH
+    assert findings[0].evidence["secrets"].get("aws_access_key") == 1
+    # The raw secret value is never echoed in the finding.
+    assert "AKIAIOSFODNN7EXAMPLE" not in str(findings[0].evidence)
+
+
+def test_secrets_pii_flags_pii_medium() -> None:
+    text = "contact the user at jane.doe@example.com about the ticket"
+    rec = _record(text, Source(source_type=SourceType.user_input))
+    findings = SecretsPiiDetector().inspect(rec, text, _ctx())
+    assert findings and findings[0].severity is Severity.MEDIUM
+    assert findings[0].evidence["pii"].get("email") == 1
+
+
+def test_secrets_pii_quiet_on_benign() -> None:
+    text = "the deployment finished successfully at 3pm"
+    rec = _record(text, Source(source_type=SourceType.user_input))
+    assert SecretsPiiDetector().inspect(rec, text, _ctx()) == []
+
+
 # -- default pack -----------------------------------------------------------
 def test_default_pack_has_all_builtin_detectors() -> None:
     names = {d.name for d in default_pack()}
@@ -158,6 +184,7 @@ def test_default_pack_has_all_builtin_detectors() -> None:
         "provenance_missing",
         "injection_scan",
         "unicode_smuggling",
+        "secrets_pii",
         "write_rate",
         "trust_scoring",
         "drift",

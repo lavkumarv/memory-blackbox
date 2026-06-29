@@ -24,6 +24,12 @@ jobs:
       - name: Build sdist and wheel
         run: uv build
 
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          uv sync --frozen
+          uvx --from cyclonedx-bom cyclonedx-py environment .venv \
+            --output-format json --outfile dist/agent-forensics.sbom.cdx.json
+
       - name: Generate subject hashes (for SLSA provenance)
         id: hash
         run: |

@@ -208,3 +208,7 @@ class Finding(BaseModel):
     message: str
     evidence: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=_time_factory)
+
+
+# The record types that are appended to the ledger (Finding is not appended).
+LedgerRecord = ProvenanceRecord | RetrievalRecord | ActionRecord | RollbackEvent

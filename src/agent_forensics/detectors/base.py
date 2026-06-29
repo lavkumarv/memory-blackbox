@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from agent_forensics.model.records import Finding, LedgerRecord
+    from agent_forensics.model.records import Finding, ProvenanceRecord
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +33,7 @@ class Detector(Protocol):
     name: str
 
     def inspect(
-        self, record: LedgerRecord, content: str, ctx: DetectorContext
+        self, record: ProvenanceRecord, content: str, ctx: DetectorContext
     ) -> list[Finding]: ...
 
 
@@ -60,7 +60,3 @@ def pack(names: Iterable[str] | None = None) -> list[Detector]:
     if names is None:
         return all_detectors()
     return [_REGISTRY[n] for n in names]
-
-
-# The default pack is empty until the built-in detectors register in M7.
-DEFAULT_PACK: list[Detector] = []

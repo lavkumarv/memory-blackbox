@@ -20,7 +20,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from agent_forensics.dag.store import EdgeStore
-from agent_forensics.detectors.base import DEFAULT_PACK, DetectorContext
+from agent_forensics.detectors import default_pack
+from agent_forensics.detectors.base import DetectorContext
 from agent_forensics.ledger.store import LedgerStore
 from agent_forensics.model.edges import EdgeType
 from agent_forensics.model.records import (
@@ -49,7 +50,7 @@ class Forensics:
     ) -> None:
         self.ledger = ledger
         self.dag = dag
-        self.detectors: list[Detector] = DEFAULT_PACK if detectors is None else detectors
+        self.detectors: list[Detector] = default_pack() if detectors is None else detectors
         self.findings: list[Finding] = []
 
     @classmethod

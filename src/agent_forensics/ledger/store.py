@@ -43,6 +43,11 @@ def _load_schema() -> str:
     return resources.files("agent_forensics.ledger").joinpath("schema.sql").read_text()
 
 
+# Whitelisted so the value can never become a SQL-injection sink (PRAGMA cannot
+# be parameterized, so it is interpolated; only these constants are accepted).
+_SYNCHRONOUS_MODES = frozenset({"OFF", "NORMAL", "FULL", "EXTRA"})
+
+
 class LedgerStore:
     """An append-only, hash-chained ledger backed by SQLite."""
 
@@ -54,14 +59,19 @@ class LedgerStore:
         checkpoint_every: int = 1,
         synchronous: str = "FULL",
     ) -> None:
+        if synchronous.upper() not in _SYNCHRONOUS_MODES:
+            raise ValueError(f"invalid synchronous mode: {synchronous!r}")
         self.path = str(path)
         self._signer = signer
         self._checkpoint_every = checkpoint_every
         self._conn = sqlite3.connect(self.path)
         self._conn.row_factory = sqlite3.Row
+        # The ledger may contain sensitive memory content; keep it owner-only.
+        if self.path != ":memory:" and Path(self.path).exists():
+            Path(self.path).chmod(0o600)
         # synchronous=OFF/NORMAL trade durability for throughput on the hot write
         # path (the spec's async-flush budget); FULL is the durable default.
-        self._conn.execute(f"PRAGMA synchronous = {synchronous}")
+        self._conn.execute(f"PRAGMA synchronous = {synchronous.upper()}")
         self._conn.executescript(_load_schema())
         self._conn.commit()
         # In-memory leaf cache for incremental Merkle root computation, loaded

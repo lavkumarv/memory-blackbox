@@ -29,7 +29,8 @@ HomeOption = Annotated[
 
 
 def _init_profile(config: Config) -> keys.KeyPair:
-    config.home.mkdir(parents=True, exist_ok=True)
+    config.home.mkdir(parents=True, exist_ok=True, mode=0o700)
+    config.home.chmod(0o700)  # owner-only: the profile holds the key and ledger
     keypair = keys.generate()
     keys.save(keypair, config.key_path)
     LedgerStore(config.ledger_path, keypair).close()  # create schema

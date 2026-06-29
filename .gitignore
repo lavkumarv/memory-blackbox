@@ -44,8 +44,9 @@ htmlcov/
 keys/
 .agent-forensics/
 
-# --- Editors / OS ---
+# --- Editors / OS / local tooling ---
 .idea/
 .vscode/
+.claude/
 *.swp
 .DS_Store

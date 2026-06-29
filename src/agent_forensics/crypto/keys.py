@@ -75,7 +75,7 @@ def generate() -> KeyPair:
 def save(keypair: KeyPair, path: Path | str) -> Path:
     """Persist ``keypair``'s private key to ``path`` with ``0600`` permissions."""
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     raw = keypair.private_key.private_bytes(Encoding.Raw, PrivateFormat.Raw, NoEncryption())
     payload = json.dumps(
         {"version": _KEY_FILE_VERSION, "kid": keypair.kid, "private_key": raw.hex()}

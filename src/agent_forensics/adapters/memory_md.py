@@ -55,6 +55,10 @@ class MemoryMdAdapter:
         for path in self._paths():
             if not path.exists():
                 continue
+            # Don't load a hostile multi-GB memory file into memory; the engine
+            # enforces the same bound, but check before reading at all.
+            if path.stat().st_size > self._forensics.max_content_bytes:
+                continue
             content = path.read_text(encoding="utf-8")
             digest = b3(content.encode("utf-8"))
             if self._snapshots.get(str(path)) == digest:

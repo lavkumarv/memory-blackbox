@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # Keep third-party GitHub Actions current (security patches for the supply
+  # chain). Combined with version-tag pins; review and pin to commit SHAs at
+  # release-hardening time if your threat model requires it.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "ci"]
+
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies"]

@@ -40,6 +40,17 @@ if TYPE_CHECKING:
     from agent_forensics.detectors.base import Detector
 
 
+# Reject absurdly large single memories to bound CPU/memory on the hot path.
+# Memory content is attacker-controllable; a multi-GB write would otherwise be
+# hashed, embedded, and copied into SQLite unbounded. Generous so real memories
+# always fit; configurable per engine.
+DEFAULT_MAX_CONTENT_BYTES = 5 * 1024 * 1024  # 5 MiB
+
+
+class ContentTooLargeError(ValueError):
+    """Raised when a memory write exceeds the configured size bound."""
+
+
 class Forensics:
     """Records memory writes, reads, and actions with signed provenance."""
 
@@ -48,10 +59,13 @@ class Forensics:
         ledger: LedgerStore,
         dag: EdgeStore,
         detectors: list[Detector] | None = None,
+        *,
+        max_content_bytes: int = DEFAULT_MAX_CONTENT_BYTES,
     ) -> None:
         self.ledger = ledger
         self.dag = dag
         self.detectors: list[Detector] = default_pack() if detectors is None else detectors
+        self.max_content_bytes = max_content_bytes
         self.findings: list[Finding] = []
 
     @classmethod
@@ -60,12 +74,14 @@ class Forensics:
         path: Path | str,
         signer: KeyPair,
         detectors: list[Detector] | None = None,
+        *,
+        max_content_bytes: int = DEFAULT_MAX_CONTENT_BYTES,
         **ledger_kwargs: object,
     ) -> Forensics:
         """Create a Forensics engine backed by a ledger and DAG at ``path``."""
         ledger = LedgerStore(path, signer, **ledger_kwargs)  # type: ignore[arg-type]
         dag = EdgeStore(ledger.connection)
-        return cls(ledger, dag, detectors)
+        return cls(ledger, dag, detectors, max_content_bytes=max_content_bytes)
 
     # -- recording ----------------------------------------------------------
     def record_write(
@@ -79,6 +95,11 @@ class Forensics:
         derived_from: Sequence[str] = (),
         caused_by_retrieval: Sequence[str] = (),
     ) -> ProvenanceRecord:
+        size = len(content.encode("utf-8"))
+        if size > self.max_content_bytes:
+            raise ContentTooLargeError(
+                f"memory content is {size} bytes, exceeds the {self.max_content_bytes}-byte limit"
+            )
         record = ProvenanceRecord(
             content=content,
             source=source,

@@ -1,0 +1,51 @@
+# --- Local-only planning & strategy docs (never commit) ---
+technical-doc.md
+notes.md
+market_guide.md
+PROJECT_PLAN.md
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+*.egg
+
+# --- Virtual envs / uv ---
+.venv/
+venv/
+env/
+.python-version
+
+# --- Test / type / lint caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.benchmarks/
+
+# --- Project runtime artifacts ---
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.key
+*.pem
+keys/
+.agent-forensics/
+
+# --- Editors / OS ---
+.idea/
+.vscode/
+*.swp
+.DS_Store

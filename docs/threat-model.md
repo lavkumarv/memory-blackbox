@@ -45,3 +45,9 @@
 - The window between an event and its Merkle-root checkpoint is a small gap; checkpoint cadence is a
   tunable trade-off between overhead and tamper-detection latency. External anchoring closes the gap
   for high-assurance deployments.
+- **Checkpoint truncation under raw file access (v1).** With the local-only `NoOpAnchor`, verification
+  trusts the latest local signed checkpoint. An attacker with raw database access who deletes the
+  latest checkpoint rows can truncate the ledger back to an earlier checkpoint and pass both chain and
+  Merkle verification — without forging the signing key. Edits, gaps, and truncation *past* the latest
+  checkpoint are still caught. External anchoring (publishing roots to a transparency log) is the
+  documented mitigation and removes this gap; see `merkle/anchor.py`.

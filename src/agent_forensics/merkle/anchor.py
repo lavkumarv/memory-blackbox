@@ -1,10 +1,16 @@
 """External root anchoring.
 
-Publishing a signed Merkle root to an external, append-only transparency log
-(Rekor-style) gives third-party verifiability: even someone who fully controls the
-host cannot rewrite history without the discrepancy showing up against the public
-log. v1 ships a no-op anchor and relies on the local signed checkpoint; the
-``Anchor`` protocol is the seam where a Rekor/Sigstore backend plugs in later.
+Once a signed Merkle root is published to an external, append-only transparency
+log (Rekor-style), even someone who fully controls the host cannot rewrite history
+without the discrepancy showing up against the public log -- that is the property
+anchoring buys.
+
+**v1 does NOT anchor.** It ships a no-op anchor and relies on the *local* signed
+checkpoint. That detects edits, gaps, and tail truncation under an attacker who
+cannot forge the signing key, but it does NOT defend against an attacker with full
+raw file access who deletes the latest checkpoint(s) and truncates the ledger back
+to an earlier checkpoint. Closing that gap requires a real external anchor; the
+``Anchor`` protocol is the seam where a Rekor/Sigstore backend plugs in.
 """
 
 from __future__ import annotations

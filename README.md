@@ -10,17 +10,18 @@ ledger plus a provenance DAG. After an incident it can trace an action back to t
 memory write and its source, compute the blast radius of a poisoned source, detect belief drift,
 verify the ledger has not been tampered with, and produce a rollback plan.
 
-> **Status:** early development. The build proceeds milestone by milestone (see the build plan).
-> This README is a skeleton and will grow as functionality lands.
-
 ## Quickstart
 
 ```bash
 pipx install agent-forensics
-agent-forensics demo      # planned: plant a poison, then catch and roll it back
+agent-forensics init      # create the ledger, signing key, and profile
+agent-forensics demo      # plant a poison, then trace, blast-radius, and roll it back
 ```
 
-> The one-command incident-replay demo is implemented in milestone M11.
+`demo` runs the full incident replay end-to-end with zero configuration: a
+poisoned document is planted, a later turn retrieves it and acts harmfully, and
+the tool traces it to the exact memory, shows the blast radius, rolls it back, and
+proves the re-run is no longer harmful — all while the ledger keeps verifying.
 
 ## What it does
 
@@ -34,9 +35,14 @@ agent-forensics demo      # planned: plant a poison, then catch and roll it back
 
 Three capture paths, all backed by the same append-only ledger:
 
-- **Library wrapper** — wrap your memory client in-process.
+- **Library wrapper** — wrap your memory client in-process (adapters for Mem0,
+  Chroma, Letta, pgvector, and the `MEMORY.md`/`CLAUDE.md`/`AGENTS.md` file surface).
 - **MCP gateway** — proxy an MCP memory server; backend-agnostic.
-- **Sidecar** — reverse proxy in front of a hosted vector DB.
+- **Sidecar** — reverse proxy in front of a hosted vector DB (Pinecone, Qdrant,
+  Weaviate, Mongo Atlas).
+
+`agent-forensics reconcile` is the honesty check: it flags backend entries that
+have no ledger record (writes that bypassed capture).
 
 ## Integrity model
 

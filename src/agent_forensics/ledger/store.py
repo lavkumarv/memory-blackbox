@@ -50,12 +50,16 @@ class LedgerStore:
         signer: KeyPair,
         *,
         checkpoint_every: int = 1,
+        synchronous: str = "FULL",
     ) -> None:
         self.path = str(path)
         self._signer = signer
         self._checkpoint_every = checkpoint_every
         self._conn = sqlite3.connect(self.path)
         self._conn.row_factory = sqlite3.Row
+        # synchronous=OFF/NORMAL trade durability for throughput on the hot write
+        # path (the spec's async-flush budget); FULL is the durable default.
+        self._conn.execute(f"PRAGMA synchronous = {synchronous}")
         self._conn.executescript(_load_schema())
         self._conn.commit()
         # In-memory leaf cache for incremental Merkle root computation, loaded

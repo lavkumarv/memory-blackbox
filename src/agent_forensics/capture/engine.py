@@ -34,6 +34,7 @@ from agent_forensics.model.records import (
 )
 
 if TYPE_CHECKING:
+    from agent_forensics.adapters.base import Adapter
     from agent_forensics.capture.wrapper import ReadMap, WrappedClient, WriteMap
     from agent_forensics.crypto.keys import KeyPair
     from agent_forensics.detectors.base import Detector
@@ -160,6 +161,18 @@ class Forensics:
             default_source=default_source,
             write_methods=write_methods,
             read_methods=read_methods,
+        )
+
+    def wrap_adapter(
+        self, client: object, adapter: Adapter, *, namespace: str, default_source: Source
+    ) -> WrappedClient:
+        """Wrap ``client`` using a backend ``adapter``'s write/read mappings."""
+        return self.wrap(
+            client,
+            namespace=namespace,
+            default_source=default_source,
+            write_methods=adapter.write_methods,
+            read_methods=adapter.read_methods,
         )
 
     # -- internals ----------------------------------------------------------

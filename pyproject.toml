@@ -94,6 +94,14 @@ warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 
+# numpy (a transitive dep, not imported directly) ships PEP 695 `type`
+# statement stubs that mypy rejects when targeting Python 3.11. Skip following
+# into them — we don't use numpy's API, so we lose no type coverage.
+[[tool.mypy.overrides]]
+module = "numpy.*"
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
 # --- pytest -----------------------------------------------------------------
 [tool.pytest.ini_options]
 minversion = "8.0"

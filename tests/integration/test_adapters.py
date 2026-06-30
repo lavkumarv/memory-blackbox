@@ -10,15 +10,15 @@ from pathlib import Path
 
 import pytest
 
-from agent_forensics.adapters.base import reconcile
-from agent_forensics.adapters.chroma_ import chroma_adapter
-from agent_forensics.adapters.letta_ import letta_adapter
-from agent_forensics.adapters.mem0_ import mem0_adapter
-from agent_forensics.adapters.memory_md import MemoryMdAdapter
-from agent_forensics.adapters.pgvector_ import PgVectorCapture
-from agent_forensics.capture.engine import Forensics
-from agent_forensics.crypto import keys
-from agent_forensics.model.records import Source, SourceType
+from memory_blackbox.adapters.base import reconcile
+from memory_blackbox.adapters.chroma_ import chroma_adapter
+from memory_blackbox.adapters.letta_ import letta_adapter
+from memory_blackbox.adapters.mem0_ import mem0_adapter
+from memory_blackbox.adapters.memory_md import MemoryMdAdapter
+from memory_blackbox.adapters.pgvector_ import PgVectorCapture
+from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.crypto import keys
+from memory_blackbox.model.records import Source, SourceType
 
 
 def _src() -> Source:

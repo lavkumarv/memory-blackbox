@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_forensics.capture.engine import ContentTooLargeError, Forensics
-from agent_forensics.crypto import keys
-from agent_forensics.ledger.store import LedgerStore
-from agent_forensics.model.records import Source, SourceType
+from memory_blackbox.capture.engine import ContentTooLargeError, Forensics
+from memory_blackbox.crypto import keys
+from memory_blackbox.ledger.store import LedgerStore
+from memory_blackbox.model.records import Source, SourceType
 
 
 def _src() -> Source:
@@ -51,7 +51,7 @@ def test_ledger_file_is_owner_only(tmp_path: Path) -> None:
 
 
 def test_memory_md_skips_oversized_file(tmp_path: Path) -> None:
-    from agent_forensics.adapters.memory_md import MemoryMdAdapter
+    from memory_blackbox.adapters.memory_md import MemoryMdAdapter
 
     eng = Forensics.open(tmp_path / "l.db", keys.generate(), detectors=[], max_content_bytes=64)
     big = tmp_path / "MEMORY.md"

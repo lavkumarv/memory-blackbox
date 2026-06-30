@@ -15,71 +15,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "agent-forensics"
-version = "0.0.0"
-source = { editable = "." }
-dependencies = [
-    { name = "blake3" },
-    { name = "cryptography" },
-    { name = "orjson" },
-    { name = "pydantic" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-chroma = [
-    { name = "chromadb" },
-]
-dev = [
-    { name = "hypothesis" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-benchmark" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-drift = [
-    { name = "sentence-transformers", version = "2.2.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15' and sys_platform == 'win32'" },
-    { name = "sentence-transformers", version = "5.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15' or sys_platform != 'win32'" },
-]
-letta = [
-    { name = "letta" },
-]
-mcp = [
-    { name = "mcp" },
-]
-mem0 = [
-    { name = "mem0ai" },
-]
-pgvector = [
-    { name = "pgvector" },
-    { name = "psycopg", extra = ["binary"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "blake3", specifier = ">=1.0" },
-    { name = "chromadb", marker = "extra == 'chroma'" },
-    { name = "cryptography", specifier = ">=42" },
-    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100" },
-    { name = "letta", marker = "extra == 'letta'" },
-    { name = "mcp", marker = "extra == 'mcp'" },
-    { name = "mem0ai", marker = "extra == 'mem0'" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },
-    { name = "orjson", specifier = ">=3.9" },
-    { name = "pgvector", marker = "extra == 'pgvector'" },
-    { name = "psycopg", extras = ["binary"], marker = "extra == 'pgvector'" },
-    { name = "pydantic", specifier = ">=2.5" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "pytest-benchmark", marker = "extra == 'dev'", specifier = ">=4.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
-    { name = "sentence-transformers", marker = "extra == 'drift'" },
-    { name = "typer", specifier = ">=0.12" },
-]
-provides-extras = ["mem0", "letta", "pgvector", "chroma", "mcp", "drift", "dev"]
-
-[[package]]
 name = "aiofile"
 version = "3.11.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3821,6 +3756,71 @@ sdist = { url = "https://files.pythonhosted.org/packages/90/43/b71a46ea164dbee57
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a4/58/9c25e77f06ec3483267f898c42fba783f2dcc411c7234dd34830bef8a372/mem0ai-2.0.10-py3-none-any.whl", hash = "sha256:9a99401c2c57bfbaf6ab780b193e458eb46802b4d75cac42f61eff13c9e34062", size = 329294, upload-time = "2026-06-27T17:10:01.157Z" },
 ]
+
+[[package]]
+name = "memory-blackbox"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "blake3" },
+    { name = "cryptography" },
+    { name = "orjson" },
+    { name = "pydantic" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+chroma = [
+    { name = "chromadb" },
+]
+dev = [
+    { name = "hypothesis" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-benchmark" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+drift = [
+    { name = "sentence-transformers", version = "2.2.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15' and sys_platform == 'win32'" },
+    { name = "sentence-transformers", version = "5.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15' or sys_platform != 'win32'" },
+]
+letta = [
+    { name = "letta" },
+]
+mcp = [
+    { name = "mcp" },
+]
+mem0 = [
+    { name = "mem0ai" },
+]
+pgvector = [
+    { name = "pgvector" },
+    { name = "psycopg", extra = ["binary"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "blake3", specifier = ">=1.0" },
+    { name = "chromadb", marker = "extra == 'chroma'" },
+    { name = "cryptography", specifier = ">=42" },
+    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100" },
+    { name = "letta", marker = "extra == 'letta'" },
+    { name = "mcp", marker = "extra == 'mcp'" },
+    { name = "mem0ai", marker = "extra == 'mem0'" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },
+    { name = "orjson", specifier = ">=3.9" },
+    { name = "pgvector", marker = "extra == 'pgvector'" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'pgvector'" },
+    { name = "pydantic", specifier = ">=2.5" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "pytest-benchmark", marker = "extra == 'dev'", specifier = ">=4.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
+    { name = "sentence-transformers", marker = "extra == 'drift'" },
+    { name = "typer", specifier = ">=0.12" },
+]
+provides-extras = ["mem0", "letta", "pgvector", "chroma", "mcp", "drift", "dev"]
 
 [[package]]
 name = "mistralai"

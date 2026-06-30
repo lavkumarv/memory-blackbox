@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_forensics.model.ids import uuid7, uuid7_str
+from memory_blackbox.model.ids import uuid7, uuid7_str
 
 
 def test_uuid7_version_and_variant() -> None:

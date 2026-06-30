@@ -6,9 +6,9 @@ import sqlite3
 
 import pytest
 
-from agent_forensics.dag.store import EdgeStore, UnknownNodeError
-from agent_forensics.dag.traverse import backward, forward_closure
-from agent_forensics.model.edges import EdgeType
+from memory_blackbox.dag.store import EdgeStore, UnknownNodeError
+from memory_blackbox.dag.traverse import backward, forward_closure
+from memory_blackbox.model.edges import EdgeType
 
 # Convention: edges encode forward influence/lineage flow, src -> dst
 # (parent/origin -> child/derived). backward() walks reverse edges to ancestors;
@@ -98,9 +98,9 @@ def test_traversal_is_cycle_safe() -> None:
 def test_referential_integrity_against_real_ledger(tmp_path: object) -> None:
     from pathlib import Path
 
-    from agent_forensics.crypto import keys
-    from agent_forensics.ledger.store import LedgerStore
-    from agent_forensics.model.records import ProvenanceRecord, Source, SourceType
+    from memory_blackbox.crypto import keys
+    from memory_blackbox.ledger.store import LedgerStore
+    from memory_blackbox.model.records import ProvenanceRecord, Source, SourceType
 
     assert isinstance(tmp_path, Path)
     store = LedgerStore(tmp_path / "ledger.db", keys.generate())

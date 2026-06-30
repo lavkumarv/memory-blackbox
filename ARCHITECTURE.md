@@ -1,4 +1,4 @@
-# agent-forensics — Architecture
+# memory-blackbox — Architecture
 
 > **Read this first.** This document is the conceptual model: *what* the system is and *why* it is
 > shaped this way. The implementation spec (held privately during development) is the *how to build
@@ -16,7 +16,7 @@ attacks; nothing *reconstructs* an incident after the fact: which memory caused 
 did it come from, what else did it infect, and how do we undo it without lying to ourselves about the
 record.
 
-`agent-forensics` is the DFIR (digital forensics & incident response) layer for agent memory. It is a
+`memory-blackbox` is the DFIR (digital forensics & incident response) layer for agent memory. It is a
 **flight recorder**: it observes every memory read and write, stamps each with tamper-evident
 provenance, and lets an investigator replay and reason about what happened.
 

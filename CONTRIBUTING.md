@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in `agent-forensics`.
+Thanks for your interest in `memory-blackbox`.
 
 ## Development
 

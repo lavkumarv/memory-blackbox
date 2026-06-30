@@ -1,6 +1,6 @@
 # Threat mapping
 
-How agent-forensics maps to the agent-security standards. The goal is that "agent
+How memory-blackbox maps to the agent-security standards. The goal is that "agent
 memory forensics" is the named forensic reference for memory & context poisoning and
 for repudiation/untraceability.
 
@@ -18,7 +18,7 @@ threat categories.
 
 ## The two threats this whole tool addresses
 
-| OWASP | What it is | How agent-forensics addresses it |
+| OWASP | What it is | How memory-blackbox addresses it |
 |-------|-----------|----------------------------------|
 | **T1 — Memory Poisoning** (≈ **ASI06** Memory & Context Poisoning) | Malicious data corrupts a memory/RAG/context store so later reasoning is skewed | Captures every write with provenance; `trace`, `blast-radius`, `rollback` reconstruct and contain it |
 | **T8 — Repudiation & Untraceability** | No reliable record of what an agent did or knew, so actions can't be attributed | The append-only, signed, tamper-evident ledger + `verify` + `trace` *is* the traceability control |
@@ -56,7 +56,7 @@ is the direct mitigation for Repudiation & Untraceability.
 
 Runtime products (OWASP Memory Guard, Microsoft Agent Governance Toolkit, and the
 runtime offerings from Snyk/Cisco/etc.) own **prevention** — they block the attack in
-the moment. agent-forensics owns **reconstruction** — provenance, blast radius, and
+the moment. memory-blackbox owns **reconstruction** — provenance, blast radius, and
 rollback after the fact. They are complementary: *they stop it; we tell you which
 memory caused it and what to roll back.*
 

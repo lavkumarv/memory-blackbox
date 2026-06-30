@@ -1,6 +1,6 @@
 # Security Policy
 
-`agent-forensics` is a security tool, so we hold it to a security-product standard.
+`memory-blackbox` is a security tool, so we hold it to a security-product standard.
 
 ## Reporting a vulnerability
 

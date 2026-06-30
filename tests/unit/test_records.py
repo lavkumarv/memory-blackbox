@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agent_forensics.crypto.hashing import b3
-from agent_forensics.model.records import (
+from memory_blackbox.crypto.hashing import b3
+from memory_blackbox.model.records import (
     ActionRecord,
     Finding,
     ProvenanceRecord,

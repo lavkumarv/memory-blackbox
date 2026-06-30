@@ -10,8 +10,8 @@ Run it:  python examples/extending/adapter_template.py
 
 from __future__ import annotations
 
-from agent_forensics.adapters.base import Adapter
-from agent_forensics.capture.wrapper import ReadMap, WriteMap
+from memory_blackbox.adapters.base import Adapter
+from memory_blackbox.capture.wrapper import ReadMap, WriteMap
 
 
 def my_backend_adapter() -> Adapter:
@@ -37,9 +37,9 @@ if __name__ == "__main__":
     import tempfile
     from pathlib import Path
 
-    from agent_forensics.capture.engine import Forensics
-    from agent_forensics.crypto import keys
-    from agent_forensics.model.records import Source, SourceType
+    from memory_blackbox.capture.engine import Forensics
+    from memory_blackbox.crypto import keys
+    from memory_blackbox.model.records import Source, SourceType
 
     class MyBackend:
         def __init__(self) -> None:

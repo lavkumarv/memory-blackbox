@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agent_forensics.model.edges import Edge, EdgeType
+from memory_blackbox.model.edges import Edge, EdgeType
 
 
 def test_edge_construction() -> None:

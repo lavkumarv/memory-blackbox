@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from agent_forensics.model.canonical import LEDGER_SET_FIELDS, canonical_bytes
-from agent_forensics.model.records import (
+from memory_blackbox.model.canonical import LEDGER_SET_FIELDS, canonical_bytes
+from memory_blackbox.model.records import (
     MemoryType,
     ProvenanceRecord,
     Source,

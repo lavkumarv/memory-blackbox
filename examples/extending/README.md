@@ -1,4 +1,4 @@
-# Extending agent-forensics
+# Extending memory-blackbox
 
 The two highest-value contributions are **detectors** (a new signal to flag in stored
 memory) and **adapters** (capture for a new memory backend). Both are ~20–30 lines.

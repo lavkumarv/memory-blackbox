@@ -7,11 +7,11 @@ from typing import Any
 
 import pytest
 
-from agent_forensics.capture.engine import Forensics
-from agent_forensics.capture.gateway import McpGateway
-from agent_forensics.capture.wrapper import CallCtx, ReadMap, WriteMap
-from agent_forensics.crypto import keys
-from agent_forensics.model.records import Source, SourceType
+from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.gateway import McpGateway
+from memory_blackbox.capture.wrapper import CallCtx, ReadMap, WriteMap
+from memory_blackbox.crypto import keys
+from memory_blackbox.model.records import Source, SourceType
 
 
 class FakeMcpMemoryServer:

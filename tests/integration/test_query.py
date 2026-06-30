@@ -8,15 +8,15 @@ from pathlib import Path
 
 import pytest
 
-from agent_forensics.capture.engine import Forensics
-from agent_forensics.crypto import keys
-from agent_forensics.model.records import Source, SourceType, TrustLevel
-from agent_forensics.query.blast_radius import blast_radius
-from agent_forensics.query.drift import drift
-from agent_forensics.query.rollback import effective_state, rollback, rolled_back_ids
-from agent_forensics.query.timeline import timeline
-from agent_forensics.query.trace import trace
-from agent_forensics.query.verify import verify
+from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.crypto import keys
+from memory_blackbox.model.records import Source, SourceType, TrustLevel
+from memory_blackbox.query.blast_radius import blast_radius
+from memory_blackbox.query.drift import drift
+from memory_blackbox.query.rollback import effective_state, rollback, rolled_back_ids
+from memory_blackbox.query.timeline import timeline
+from memory_blackbox.query.trace import trace
+from memory_blackbox.query.verify import verify
 
 
 @dataclass
@@ -126,7 +126,7 @@ def test_verify_detects_tamper_through_query(tmp_path: Path) -> None:
     con.execute("UPDATE ledger SET payload_json = '{\"x\":1}' WHERE seq = 2")
     con.commit()
 
-    from agent_forensics.ledger.chain import verify_chain
+    from memory_blackbox.ledger.chain import verify_chain
 
     assert not verify_chain(con, public_key).ok
     con.close()

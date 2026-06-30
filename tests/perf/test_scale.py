@@ -12,11 +12,11 @@ from pathlib import Path
 
 import pytest
 
-from agent_forensics.crypto import keys
-from agent_forensics.ledger.store import LedgerStore
-from agent_forensics.merkle.tree import verify_merkle
-from agent_forensics.model.records import ProvenanceRecord, Source, SourceType
-from agent_forensics.query.verify import verify
+from memory_blackbox.crypto import keys
+from memory_blackbox.ledger.store import LedgerStore
+from memory_blackbox.merkle.tree import verify_merkle
+from memory_blackbox.model.records import ProvenanceRecord, Source, SourceType
+from memory_blackbox.query.verify import verify
 
 ROWS = 5_000
 
@@ -32,7 +32,7 @@ def test_verify_scales_to_many_rows(tmp_path: Path) -> None:
     store.checkpoint()
 
     start = time.perf_counter()
-    from agent_forensics.ledger.chain import verify_chain
+    from memory_blackbox.ledger.chain import verify_chain
 
     chain = verify_chain(store.connection, store.public_key)
     merkle = verify_merkle(store.connection, store.public_key)

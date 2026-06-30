@@ -19,6 +19,6 @@ cov:  ## Run tests with coverage on the core packages
 	uv run pytest --cov --cov-report=term-missing
 
 demo:  ## Run the end-to-end incident-replay demo (implemented in M11)
-	uv run agent-forensics demo
+	uv run memory-blackbox demo
 
 check: lint typecheck test  ## Run lint, typecheck, and tests

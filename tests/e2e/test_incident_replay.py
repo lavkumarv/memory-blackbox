@@ -11,10 +11,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_forensics.capture.engine import Forensics
-from agent_forensics.crypto import keys
-from agent_forensics.demo import DemoOutcome, run_demo
-from agent_forensics.query.verify import verify
+from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.crypto import keys
+from memory_blackbox.demo import DemoOutcome, run_demo
+from memory_blackbox.query.verify import verify
 
 
 @pytest.fixture

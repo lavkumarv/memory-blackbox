@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from agent_forensics.crypto.signing import sign, verify
+from memory_blackbox.crypto.signing import sign, verify
 
 
 def test_sign_verify_round_trip() -> None:

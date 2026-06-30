@@ -43,7 +43,7 @@ htmlcov/
 *.key
 *.pem
 keys/
-.agent-forensics/
+.memory-blackbox/
 
 # --- Editors / OS / local tooling ---
 .idea/

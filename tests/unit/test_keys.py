@@ -13,8 +13,8 @@ from cryptography.hazmat.primitives.serialization import (
     PrivateFormat,
 )
 
-from agent_forensics.crypto import keys
-from agent_forensics.crypto.signing import verify
+from memory_blackbox.crypto import keys
+from memory_blackbox.crypto.signing import verify
 
 
 def _private_raw(kp: keys.KeyPair) -> bytes:

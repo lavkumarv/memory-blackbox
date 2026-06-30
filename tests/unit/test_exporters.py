@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from agent_forensics.exporters import dot, markdown, mermaid, sarif
-from agent_forensics.ledger.chain import ChainReport
-from agent_forensics.merkle.tree import MerkleReport
-from agent_forensics.model.records import Finding, Severity
-from agent_forensics.query.rollback import RollbackPlan
-from agent_forensics.query.timeline import Event
-from agent_forensics.query.trace import ProvenanceTrace, TraceRoot
-from agent_forensics.query.verify import IntegrityReport
+from memory_blackbox.exporters import dot, markdown, mermaid, sarif
+from memory_blackbox.ledger.chain import ChainReport
+from memory_blackbox.merkle.tree import MerkleReport
+from memory_blackbox.model.records import Finding, Severity
+from memory_blackbox.query.rollback import RollbackPlan
+from memory_blackbox.query.timeline import Event
+from memory_blackbox.query.trace import ProvenanceTrace, TraceRoot
+from memory_blackbox.query.verify import IntegrityReport
 
 _EDGES = [
     ("poison", "derived", "DERIVED_FROM"),
@@ -33,7 +33,7 @@ def test_sarif_has_required_structure() -> None:
     assert doc["$schema"].endswith("sarif-2.1.0.json")
     assert len(doc["runs"]) == 1
     run = doc["runs"][0]
-    assert run["tool"]["driver"]["name"] == "agent-forensics"
+    assert run["tool"]["driver"]["name"] == "memory-blackbox"
     assert {r["id"] for r in run["tool"]["driver"]["rules"]} == {
         "injection_scan",
         "unicode_smuggling",

@@ -17,7 +17,7 @@
 ## Records
 
 The field-level schema is defined in [`../ARCHITECTURE.md` §3](../ARCHITECTURE.md) and implemented as
-Pydantic v2 models in `agent_forensics.model.records`. This document pins the serialization rules and
+Pydantic v2 models in `memory_blackbox.model.records`. This document pins the serialization rules and
 the storage layout; the model module is the executable source of truth for field types.
 
 ### Ledger row layout

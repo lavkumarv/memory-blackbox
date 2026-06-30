@@ -5,18 +5,18 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from agent_forensics.capture.engine import Forensics
-from agent_forensics.crypto import keys
-from agent_forensics.detectors.base import DetectorContext
-from agent_forensics.detectors.drift import DriftDetector
-from agent_forensics.embedding import HashingEmbedder, cosine
-from agent_forensics.model.records import (
+from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.crypto import keys
+from memory_blackbox.detectors.base import DetectorContext
+from memory_blackbox.detectors.drift import DriftDetector
+from memory_blackbox.embedding import HashingEmbedder, cosine
+from memory_blackbox.model.records import (
     ProvenanceRecord,
     Source,
     SourceType,
     TrustLevel,
 )
-from agent_forensics.query.drift import drift
+from memory_blackbox.query.drift import drift
 
 
 def _trusted() -> Source:

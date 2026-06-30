@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from agent_forensics.merkle.anchor import Anchor, NoOpAnchor
-from agent_forensics.merkle.tree import (
+from memory_blackbox.merkle.anchor import Anchor, NoOpAnchor
+from memory_blackbox.merkle.tree import (
     compute_root,
     hash_leaf,
     hash_node,

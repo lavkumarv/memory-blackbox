@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_forensics.crypto import keys
-from agent_forensics.ledger.store import LedgerStore
-from agent_forensics.merkle.tree import verify_merkle
-from agent_forensics.model.records import ProvenanceRecord, Source, SourceType
+from memory_blackbox.crypto import keys
+from memory_blackbox.ledger.store import LedgerStore
+from memory_blackbox.merkle.tree import verify_merkle
+from memory_blackbox.model.records import ProvenanceRecord, Source, SourceType
 
 
 @pytest.fixture

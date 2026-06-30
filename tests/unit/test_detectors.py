@@ -6,15 +6,15 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from agent_forensics.detectors import default_pack
-from agent_forensics.detectors.base import DetectorContext
-from agent_forensics.detectors.injection_scan import InjectionScanDetector
-from agent_forensics.detectors.provenance_missing import ProvenanceMissingDetector
-from agent_forensics.detectors.secrets_pii import SecretsPiiDetector
-from agent_forensics.detectors.trust_scoring import TrustScoringDetector
-from agent_forensics.detectors.unicode_smuggling import UnicodeSmugglingDetector
-from agent_forensics.detectors.write_rate import WriteRateDetector
-from agent_forensics.model.records import (
+from memory_blackbox.detectors import default_pack
+from memory_blackbox.detectors.base import DetectorContext
+from memory_blackbox.detectors.injection_scan import InjectionScanDetector
+from memory_blackbox.detectors.provenance_missing import ProvenanceMissingDetector
+from memory_blackbox.detectors.secrets_pii import SecretsPiiDetector
+from memory_blackbox.detectors.trust_scoring import TrustScoringDetector
+from memory_blackbox.detectors.unicode_smuggling import UnicodeSmugglingDetector
+from memory_blackbox.detectors.write_rate import WriteRateDetector
+from memory_blackbox.model.records import (
     ProvenanceRecord,
     Severity,
     Source,

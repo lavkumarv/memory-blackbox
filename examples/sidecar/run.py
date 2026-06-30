@@ -21,11 +21,11 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from agent_forensics.capture.engine import Forensics
-from agent_forensics.capture.sidecar import PROVENANCE_TAG, Sidecar
-from agent_forensics.capture.wrapper import ReadMap, WriteMap
-from agent_forensics.crypto import keys
-from agent_forensics.model.records import Source, SourceType, TrustLevel
+from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.sidecar import PROVENANCE_TAG, Sidecar
+from memory_blackbox.capture.wrapper import ReadMap, WriteMap
+from memory_blackbox.crypto import keys
+from memory_blackbox.model.records import Source, SourceType, TrustLevel
 
 
 class FakeVectorDB:

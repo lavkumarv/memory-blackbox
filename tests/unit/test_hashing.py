@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_forensics.crypto.hashing import b3, b3_raw
+from memory_blackbox.crypto.hashing import b3, b3_raw
 
 # Published BLAKE3 known-answer vector for the empty input.
 EMPTY_BLAKE3 = "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"

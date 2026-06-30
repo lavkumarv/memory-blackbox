@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a defect in agent-forensics
+about: Report a defect in memory-blackbox
 title: "[bug] "
 labels: bug
 ---
@@ -19,7 +19,7 @@ Steps or a minimal snippet that reproduces the behavior.
 What you expected to happen.
 
 **Environment**
-- agent-forensics version:
+- memory-blackbox version:
 - Python version:
 - OS:
 - Capture path (library wrapper / MCP gateway / sidecar) and backend:

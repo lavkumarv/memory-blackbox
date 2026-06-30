@@ -7,11 +7,11 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from agent_forensics.capture.engine import Forensics
-from agent_forensics.cli import app
-from agent_forensics.config import resolve_config
-from agent_forensics.crypto import keys
-from agent_forensics.model.records import Source, SourceType
+from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.cli import app
+from memory_blackbox.config import resolve_config
+from memory_blackbox.crypto import keys
+from memory_blackbox.model.records import Source, SourceType
 
 runner = CliRunner()
 

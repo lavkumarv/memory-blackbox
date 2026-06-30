@@ -1,8 +1,8 @@
 cff-version: 1.2.0
-message: "If you use agent-forensics in your research, please cite it as below."
-title: "agent-forensics: provenance and incident-reconstruction for AI agent memory"
+message: "If you use memory-blackbox in your research, please cite it as below."
+title: "memory-blackbox: provenance and incident-reconstruction for AI agent memory"
 abstract: >-
-  agent-forensics is a digital-forensics and incident-response toolkit for AI
+  memory-blackbox is a digital-forensics and incident-response toolkit for AI
   agent memory. It captures every memory read and write with cryptographically
   signed, tamper-evident provenance in an append-only ledger and provenance DAG,
   and reconstructs incidents by tracing actions to their originating memory and

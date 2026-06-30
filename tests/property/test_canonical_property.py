@@ -7,7 +7,7 @@ from typing import Any
 from hypothesis import given
 from hypothesis import strategies as st
 
-from agent_forensics.model.canonical import canonical_bytes
+from memory_blackbox.model.canonical import canonical_bytes
 
 # JSON-like values with string keys, nested up to a small depth. Integers are
 # bounded to the 64-bit range that JSON/orjson supports (the domain canonical

@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_forensics.crypto import keys
-from agent_forensics.ledger.chain import DivergenceKind, verify_chain
-from agent_forensics.ledger.store import LedgerStore
-from agent_forensics.model.records import (
+from memory_blackbox.crypto import keys
+from memory_blackbox.ledger.chain import DivergenceKind, verify_chain
+from memory_blackbox.ledger.store import LedgerStore
+from memory_blackbox.model.records import (
     ActionRecord,
     ProvenanceRecord,
     RetrievalRecord,

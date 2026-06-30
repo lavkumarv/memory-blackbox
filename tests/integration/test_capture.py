@@ -7,12 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from agent_forensics.capture.engine import Forensics
-from agent_forensics.capture.wrapper import ReadMap, WriteMap
-from agent_forensics.crypto import keys
-from agent_forensics.dag.traverse import backward, forward_closure
-from agent_forensics.detectors.base import DetectorContext
-from agent_forensics.model.records import (
+from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.wrapper import ReadMap, WriteMap
+from memory_blackbox.crypto import keys
+from memory_blackbox.dag.traverse import backward, forward_closure
+from memory_blackbox.detectors.base import DetectorContext
+from memory_blackbox.model.records import (
     Finding,
     LedgerRecord,
     Severity,

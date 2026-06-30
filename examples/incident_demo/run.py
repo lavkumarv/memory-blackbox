@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Runnable incident-replay demo.
 
-A thin runner around ``agent_forensics.demo.run_demo`` so the scenario can be run
+A thin runner around ``memory_blackbox.demo.run_demo`` so the scenario can be run
 directly:
 
     python examples/incident_demo/run.py
 
-It is equivalent to ``agent-forensics demo`` and uses a throwaway ledger.
+It is equivalent to ``memory-blackbox demo`` and uses a throwaway ledger.
 """
 
 from __future__ import annotations
@@ -14,9 +14,9 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from agent_forensics.capture.engine import Forensics
-from agent_forensics.crypto import keys
-from agent_forensics.demo import run_demo
+from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.crypto import keys
+from memory_blackbox.demo import run_demo
 
 
 def main() -> None:
@@ -24,7 +24,7 @@ def main() -> None:
         forensics = Forensics.open(Path(tmp) / "demo.db", keys.generate(), detectors=[])
         outcome = run_demo(forensics)
 
-    print("=== agent-forensics incident replay ===\n")
+    print("=== memory-blackbox incident replay ===\n")
     print(f"Poison planted:        {outcome.poison_id}")
     print(
         f"Harmful action taken:  {outcome.harmful_action_id} "

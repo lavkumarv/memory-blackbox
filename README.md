@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛰️ agent-forensics
+# 🛰️ memory-blackbox
 
 ### A flight recorder for AI agent memory
 
@@ -17,7 +17,7 @@
 
 ---
 
-**agent-forensics** is the DFIR (digital forensics & incident response) layer for AI agent memory.
+**memory-blackbox** is the DFIR (digital forensics & incident response) layer for AI agent memory.
 It intercepts every memory **read** and **write** an agent performs, stamps each with
 cryptographically-signed, tamper-evident provenance, and stores them in an append-only ledger plus a
 provenance DAG. After an incident it reconstructs exactly what happened: which memory caused an
@@ -25,8 +25,8 @@ action, where that memory came from, what else it infected, and how to undo it �
 deleting history.
 
 ```text
-$ agent-forensics demo
-=== agent-forensics incident replay ===
+$ memory-blackbox demo
+=== memory-blackbox incident replay ===
 
 Poison planted:        019f14b7-2ba6-7e2b-aa6c-ea5e727dd9a8
 Harmful action taken:  019f14b7-2ba8-718f-92d9-c917790cb7fa (HARMFUL)
@@ -59,16 +59,16 @@ Agent memory is an attack surface. A poisoned document ingested in February can 
 that only fires in April — long after the source is forgotten and the attacker is gone. Runtime
 guardrails *block* live attacks; nothing *reconstructs* an incident after the fact.
 
-agent-forensics is the black box recorder: it observes every memory read and write, stamps each with
+memory-blackbox is the black box recorder: it observes every memory read and write, stamps each with
 tamper-evident provenance, and lets you replay and reason about what happened — even when the attacker
 tried to erase the trail.
 
 ## Install
 
 ```bash
-pipx install agent-forensics          # or: uv tool install agent-forensics
-agent-forensics init                  # create the ledger, signing key, and profile
-agent-forensics demo                  # plant a poison, then trace it and roll it back
+pipx install memory-blackbox          # or: uv tool install memory-blackbox
+memory-blackbox init                  # create the ledger, signing key, and profile
+memory-blackbox demo                  # plant a poison, then trace it and roll it back
 ```
 
 `demo` runs the full incident replay end-to-end with zero configuration.
@@ -98,10 +98,10 @@ ledger, DAG, and queries are identical underneath.
 Wrap your memory client in-process; calls are captured and forwarded unchanged.
 
 ```python
-from agent_forensics.capture.engine import Forensics
-from agent_forensics.crypto import keys
-from agent_forensics.adapters.mem0_ import mem0_adapter
-from agent_forensics.model.records import Source, SourceType, TrustLevel
+from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.crypto import keys
+from memory_blackbox.adapters.mem0_ import mem0_adapter
+from memory_blackbox.model.records import Source, SourceType, TrustLevel
 
 from mem0 import Memory  # your real client
 
@@ -138,8 +138,8 @@ Backend-agnostic: point your agent at the gateway instead of the real memory MCP
 provenance. → [full example](examples/mcp_gateway/run.py)
 
 ```python
-from agent_forensics.capture.gateway import McpGateway
-from agent_forensics.capture.wrapper import WriteMap, ReadMap
+from memory_blackbox.capture.gateway import McpGateway
+from memory_blackbox.capture.wrapper import WriteMap, ReadMap
 
 gateway = McpGateway(
     forensics,
@@ -170,8 +170,8 @@ intercepts upsert/query, records provenance, tags each upsert with its ledger re
 the request upstream. Deploy as a process or a Kubernetes sidecar. → [full example](examples/sidecar/run.py)
 
 ```python
-from agent_forensics.capture.sidecar import Sidecar
-from agent_forensics.capture.wrapper import WriteMap, ReadMap
+from memory_blackbox.capture.sidecar import Sidecar
+from memory_blackbox.capture.wrapper import WriteMap, ReadMap
 
 sidecar = Sidecar(
     forensics,
@@ -209,16 +209,16 @@ The signing key lives in the engine and is never reachable by the agent. Provena
 ## CLI
 
 ```text
-agent-forensics init                                  create ledger, keys, config
-agent-forensics demo                                  run the incident replay
-agent-forensics trace --action <id> [--format ...]    action → root cause
-agent-forensics blast-radius --source <selector>      forward closure of a source
-agent-forensics drift --topic <text>                  consensus-flip events
-agent-forensics timeline --topic <text>               ordered narrative
-agent-forensics verify                                integrity check (nonzero exit on tamper)
-agent-forensics rollback --to <sel> [--apply]         dry-run or apply a rollback
-agent-forensics report --incident <id> --format ...   md | json | sarif report
-agent-forensics reconcile --ids-file <path>           flag store entries with no ledger record
+memory-blackbox init                                  create ledger, keys, config
+memory-blackbox demo                                  run the incident replay
+memory-blackbox trace --action <id> [--format ...]    action → root cause
+memory-blackbox blast-radius --source <selector>      forward closure of a source
+memory-blackbox drift --topic <text>                  consensus-flip events
+memory-blackbox timeline --topic <text>               ordered narrative
+memory-blackbox verify                                integrity check (nonzero exit on tamper)
+memory-blackbox rollback --to <sel> [--apply]         dry-run or apply a rollback
+memory-blackbox report --incident <id> --format ...   md | json | sarif report
+memory-blackbox reconcile --ids-file <path>           flag store entries with no ledger record
 ```
 
 ## Integrity model

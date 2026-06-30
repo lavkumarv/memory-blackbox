@@ -1,6 +1,6 @@
 # Developer Certificate of Origin
 
-agent-forensics requires every contribution to be signed off under the Developer
+memory-blackbox requires every contribution to be signed off under the Developer
 Certificate of Origin (DCO) 1.1. Sign off your commits with:
 
 ```bash

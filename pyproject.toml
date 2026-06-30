@@ -1,6 +1,6 @@
 [project]
 name = "agent-forensics"
-version = "0.0.0"
+version = "0.1.0"
 description = "Provenance and incident-reconstruction toolkit for AI agent memory."
 readme = "README.md"
 requires-python = ">=3.11"

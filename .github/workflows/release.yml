@@ -28,7 +28,7 @@ jobs:
         run: |
           uv sync --frozen
           uvx --from cyclonedx-bom cyclonedx-py environment .venv \
-            --output-format json --outfile dist/memory-blackbox.sbom.cdx.json
+            --output-format json --output-file dist/memory-blackbox.sbom.cdx.json
 
       - name: Generate subject hashes (for SLSA provenance)
         id: hash

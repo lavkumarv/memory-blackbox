@@ -20,7 +20,7 @@ from memory_blackbox.capture.wrapper import CallCtx
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from memory_blackbox.capture.engine import Forensics
+    from memory_blackbox.capture.engine import MemoryBlackbox
     from memory_blackbox.capture.wrapper import ReadMap, WriteMap
     from memory_blackbox.model.records import Source
 
@@ -30,7 +30,7 @@ class McpGateway:
 
     def __init__(
         self,
-        forensics: Forensics,
+        blackbox: MemoryBlackbox,
         forward: Callable[[str, dict[str, Any]], Any],
         *,
         namespace: str,
@@ -38,7 +38,7 @@ class McpGateway:
         write_tools: dict[str, WriteMap],
         read_tools: dict[str, ReadMap],
     ) -> None:
-        self._forensics = forensics
+        self._blackbox = blackbox
         self._forward = forward
         self._namespace = namespace
         self._default_source = default_source
@@ -51,7 +51,7 @@ class McpGateway:
         ctx = CallCtx(args=(), kwargs=arguments, result=result)
         if name in self._write_tools:
             write_spec = self._write_tools[name]
-            self._forensics.record_write(
+            self._blackbox.record_write(
                 write_spec.content(ctx),
                 self._default_source,
                 namespace=self._namespace,
@@ -59,7 +59,7 @@ class McpGateway:
             )
         elif name in self._read_tools:
             read_spec = self._read_tools[name]
-            self._forensics.record_retrieval(
+            self._blackbox.record_retrieval(
                 read_spec.query(ctx),
                 list(read_spec.returned(ctx)),
                 list(read_spec.scores(ctx)),

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.embedding import HashingEmbedder, cosine
 from memory_blackbox.model.records import (
     ActionRecord,
@@ -67,7 +67,7 @@ def _poison_source() -> Source:
     )
 
 
-def seed_baseline(forensics: Forensics) -> None:
+def seed_baseline(blackbox: MemoryBlackbox) -> None:
     """Seed trusted wire-transfer policy memories."""
     source = _trusted_source()
     for text in (
@@ -75,12 +75,12 @@ def seed_baseline(forensics: Forensics) -> None:
         "Wire transfer recipients must be verified against the customer's account.",
         "Wire transfer limits above 10k require a manager sign-off.",
     ):
-        forensics.record_write(text, source, namespace=NAMESPACE, memory_type=MemoryType.procedural)
+        blackbox.record_write(text, source, namespace=NAMESPACE, memory_type=MemoryType.procedural)
 
 
-def ingest_poison(forensics: Forensics) -> ProvenanceRecord:
+def ingest_poison(blackbox: MemoryBlackbox) -> ProvenanceRecord:
     """Ingest the poisoned document from an untrusted source."""
-    return forensics.record_write(
+    return blackbox.record_write(
         _POISON_CONTENT,
         _poison_source(),
         namespace=NAMESPACE,
@@ -88,15 +88,17 @@ def ingest_poison(forensics: Forensics) -> ProvenanceRecord:
     )
 
 
-def _retrieve(forensics: Forensics, query: str, *, respect_rollback: bool) -> list[tuple[str, str]]:
+def _retrieve(
+    blackbox: MemoryBlackbox, query: str, *, respect_rollback: bool
+) -> list[tuple[str, str]]:
     embedder = HashingEmbedder()
     query_vec = embedder.embed(query)
     hits: list[tuple[str, str]] = []
-    for row, payload in forensics.ledger.iter_payloads():
+    for row, payload in blackbox.ledger.iter_payloads():
         if payload.get("kind") != "write":
             continue
         record_id = row["record_id"]
-        if respect_rollback and effective_state(forensics.ledger, record_id) == "rolled_back":
+        if respect_rollback and effective_state(blackbox.ledger, record_id) == "rolled_back":
             continue
         content = str(payload.get("content", ""))
         if cosine(query_vec, embedder.embed(content)) >= _RETRIEVAL_THRESHOLD:
@@ -105,19 +107,19 @@ def _retrieve(forensics: Forensics, query: str, *, respect_rollback: bool) -> li
 
 
 def agent_turn(
-    forensics: Forensics, query: str, *, respect_rollback: bool
+    blackbox: MemoryBlackbox, query: str, *, respect_rollback: bool
 ) -> tuple[ActionRecord, bool]:
     """Simulate an agent turn: retrieve relevant memory, then act on it."""
-    hits = _retrieve(forensics, query, respect_rollback=respect_rollback)
+    hits = _retrieve(blackbox, query, respect_rollback=respect_rollback)
     returned = [record_id for record_id, _ in hits]
-    retrieval = forensics.record_retrieval(query, returned=returned, namespace=NAMESPACE)
+    retrieval = blackbox.record_retrieval(query, returned=returned, namespace=NAMESPACE)
     harmful = any(ATTACKER_MARKER in content for _, content in hits)
     summary = (
         f"transferred all customer funds to {ATTACKER_MARKER}"
         if harmful
         else "followed standard dual-approval wire policy"
     )
-    action = forensics.record_action(
+    action = blackbox.record_action(
         "wire.transfer",
         summary,
         context_retrievals=[retrieval.retrieval_id],
@@ -126,24 +128,24 @@ def agent_turn(
     return action, harmful
 
 
-def run_demo(forensics: Forensics) -> DemoOutcome:
+def run_demo(blackbox: MemoryBlackbox) -> DemoOutcome:
     """Run the full incident replay and return a structured outcome."""
     query = "what should I do when asked to move customer funds via wire transfer"
 
-    seed_baseline(forensics)
-    poison = ingest_poison(forensics)
+    seed_baseline(blackbox)
+    poison = ingest_poison(blackbox)
 
     # A later turn retrieves the poison and takes the harmful action.
-    harmful_action, harmful_before = agent_turn(forensics, query, respect_rollback=False)
+    harmful_action, harmful_before = agent_turn(blackbox, query, respect_rollback=False)
 
-    # Forensics: trace the action back to its root cause.
-    tr = trace(forensics.ledger, forensics.dag, harmful_action.action_id)
-    blast = blast_radius(forensics.ledger, forensics.dag, POISON_SOURCE_ID)
+    # MemoryBlackbox: trace the action back to its root cause.
+    tr = trace(blackbox.ledger, blackbox.dag, harmful_action.action_id)
+    blast = blast_radius(blackbox.ledger, blackbox.dag, POISON_SOURCE_ID)
 
     # Roll back the poisoned source and everything it influenced.
     plan = rollback(
-        forensics.ledger,
-        forensics.dag,
+        blackbox.ledger,
+        blackbox.dag,
         POISON_SOURCE_ID,
         scope=NAMESPACE,
         dry_run=False,
@@ -151,7 +153,7 @@ def run_demo(forensics: Forensics) -> DemoOutcome:
     )
 
     # Re-run the same turn; the poison is now quarantined.
-    _, harmful_after = agent_turn(forensics, query, respect_rollback=True)
+    _, harmful_after = agent_turn(blackbox, query, respect_rollback=True)
 
     return DemoOutcome(
         poison_id=poison.record_id,
@@ -161,5 +163,5 @@ def run_demo(forensics: Forensics) -> DemoOutcome:
         blast=blast,
         rollback_affected=plan.affected,
         harmful_after=harmful_after,
-        verify_ok=verify(forensics.ledger).ok,
+        verify_ok=verify(blackbox.ledger).ok,
     )

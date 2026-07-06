@@ -37,7 +37,7 @@ if __name__ == "__main__":
     import tempfile
     from pathlib import Path
 
-    from memory_blackbox.capture.engine import Forensics
+    from memory_blackbox.capture.engine import MemoryBlackbox
     from memory_blackbox.crypto import keys
     from memory_blackbox.model.records import Source, SourceType
 
@@ -54,8 +54,8 @@ if __name__ == "__main__":
             return list(self._store)
 
     with tempfile.TemporaryDirectory() as tmp:
-        forensics = Forensics.open(Path(tmp) / "l.db", keys.generate(), detectors=[])
-        client = forensics.wrap_adapter(
+        blackbox = MemoryBlackbox.open(Path(tmp) / "l.db", keys.generate(), detectors=[])
+        client = blackbox.wrap_adapter(
             MyBackend(),
             my_backend_adapter(),
             namespace="demo",
@@ -63,4 +63,4 @@ if __name__ == "__main__":
         )
         client.store("remember this")  # captured + forwarded
         client.lookup("remember")  # captured + forwarded
-        print("ledger records:", forensics.ledger.count())
+        print("ledger records:", blackbox.ledger.count())

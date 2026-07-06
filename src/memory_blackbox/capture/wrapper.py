@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from memory_blackbox.capture.engine import Forensics
+    from memory_blackbox.capture.engine import MemoryBlackbox
     from memory_blackbox.model.records import Source
 
 
@@ -50,7 +50,7 @@ class WrappedClient:
 
     def __init__(
         self,
-        forensics: Forensics,
+        blackbox: MemoryBlackbox,
         client: object,
         *,
         namespace: str,
@@ -58,7 +58,7 @@ class WrappedClient:
         write_methods: dict[str, WriteMap],
         read_methods: dict[str, ReadMap],
     ) -> None:
-        self._forensics = forensics
+        self._blackbox = blackbox
         self._client = client
         self._namespace = namespace
         self._default_source = default_source
@@ -79,7 +79,7 @@ class WrappedClient:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             result = method(*args, **kwargs)
             ctx = CallCtx(args=args, kwargs=kwargs, result=result)
-            self._forensics.record_write(
+            self._blackbox.record_write(
                 spec.content(ctx),
                 self._default_source,
                 namespace=self._namespace,
@@ -95,7 +95,7 @@ class WrappedClient:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             result = method(*args, **kwargs)
             ctx = CallCtx(args=args, kwargs=kwargs, result=result)
-            self._forensics.record_retrieval(
+            self._blackbox.record_retrieval(
                 spec.query(ctx),
                 list(spec.returned(ctx)),
                 list(spec.scores(ctx)),

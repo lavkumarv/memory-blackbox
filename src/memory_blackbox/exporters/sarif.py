@@ -54,7 +54,7 @@ def findings_to_sarif(findings: Iterable[Finding], tool_version: str = "0.0.0") 
                     "driver": {
                         "name": "memory-blackbox",
                         "version": tool_version,
-                        "informationUri": "https://github.com/lavkumarv/agent-forensics",
+                        "informationUri": "https://github.com/lavkumarv/memory-blackbox",
                         "rules": rules,
                     }
                 },

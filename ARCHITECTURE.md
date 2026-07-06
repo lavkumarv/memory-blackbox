@@ -146,7 +146,7 @@ and machines** — pinned by a golden-file test.
 
 ## 8. Capture & integration
 
-One engine (`Forensics`) records writes/reads/actions; three ways to feed it:
+One engine (`MemoryBlackbox`) records writes/reads/actions; three ways to feed it:
 
 - **Library wrapper** — wrap a memory client in-process; an adapter maps the backend's
   add/search/get/delete onto `record_write` / `record_retrieval`.

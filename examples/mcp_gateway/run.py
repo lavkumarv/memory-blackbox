@@ -19,7 +19,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.capture.gateway import McpGateway
 from memory_blackbox.capture.wrapper import ReadMap, WriteMap
 from memory_blackbox.crypto import keys
@@ -43,11 +43,11 @@ class FakeMcpMemoryServer:
 
 def main() -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        forensics = Forensics.open(Path(tmp) / "gateway.db", keys.generate(), detectors=[])
+        blackbox = MemoryBlackbox.open(Path(tmp) / "gateway.db", keys.generate(), detectors=[])
         upstream = FakeMcpMemoryServer()
 
         gateway = McpGateway(
-            forensics,
+            blackbox,
             upstream.call,  # forward(tool_name, arguments) -> result
             namespace="agent",
             default_source=Source(
@@ -79,7 +79,7 @@ def main() -> None:
     print("  create_memory ->", created)
     print("  search_memory ->", found)
     print(
-        f"\nProvenance captured: {forensics.ledger.count()} ledger record(s) "
+        f"\nProvenance captured: {blackbox.ledger.count()} ledger record(s) "
         "(1 write + 1 retrieval), each signed and chained."
     )
 

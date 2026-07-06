@@ -16,7 +16,7 @@ from memory_blackbox.crypto.hashing import b3
 from memory_blackbox.model.records import MemoryType, Source, SourceType
 
 if TYPE_CHECKING:
-    from memory_blackbox.capture.engine import Forensics
+    from memory_blackbox.capture.engine import MemoryBlackbox
     from memory_blackbox.model.records import ProvenanceRecord
 
 DEFAULT_FILES = ("MEMORY.md", "CLAUDE.md", "AGENTS.md")
@@ -28,13 +28,13 @@ class MemoryMdAdapter:
 
     def __init__(
         self,
-        forensics: Forensics,
+        blackbox: MemoryBlackbox,
         root: Path | str,
         *,
         namespace: str = "memory_md",
         filenames: tuple[str, ...] = DEFAULT_FILES,
     ) -> None:
-        self._forensics = forensics
+        self._blackbox = blackbox
         self._root = Path(root)
         self._namespace = namespace
         self._filenames = filenames
@@ -57,7 +57,7 @@ class MemoryMdAdapter:
                 continue
             # Don't load a hostile multi-GB memory file into memory; the engine
             # enforces the same bound, but check before reading at all.
-            if path.stat().st_size > self._forensics.max_content_bytes:
+            if path.stat().st_size > self._blackbox.max_content_bytes:
                 continue
             content = path.read_text(encoding="utf-8")
             digest = b3(content.encode("utf-8"))
@@ -70,7 +70,7 @@ class MemoryMdAdapter:
                 locator=str(path),
             )
             records.append(
-                self._forensics.record_write(
+                self._blackbox.record_write(
                     content,
                     source,
                     namespace=self._namespace,

@@ -1,6 +1,6 @@
-"""The Forensics engine facade.
+"""The MemoryBlackbox engine facade.
 
-`Forensics` is the single entry point for recording memory activity. Each
+`MemoryBlackbox` is the single entry point for recording memory activity. Each
 `record_*` call builds the appropriate record, runs detectors, appends to the
 ledger, and inserts the provenance-DAG edges that later power trace and
 blast-radius. Edges follow the forward-influence convention (src -> dst,
@@ -51,7 +51,7 @@ class ContentTooLargeError(ValueError):
     """Raised when a memory write exceeds the configured size bound."""
 
 
-class Forensics:
+class MemoryBlackbox:
     """Records memory writes, reads, and actions with signed provenance."""
 
     def __init__(
@@ -77,8 +77,8 @@ class Forensics:
         *,
         max_content_bytes: int = DEFAULT_MAX_CONTENT_BYTES,
         **ledger_kwargs: object,
-    ) -> Forensics:
-        """Create a Forensics engine backed by a ledger and DAG at ``path``."""
+    ) -> MemoryBlackbox:
+        """Create a MemoryBlackbox engine backed by a ledger and DAG at ``path``."""
         ledger = LedgerStore(path, signer, **ledger_kwargs)  # type: ignore[arg-type]
         dag = EdgeStore(ledger.connection)
         return cls(ledger, dag, detectors, max_content_bytes=max_content_bytes)

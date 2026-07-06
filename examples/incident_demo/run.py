@@ -14,15 +14,15 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.crypto import keys
 from memory_blackbox.demo import run_demo
 
 
 def main() -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        forensics = Forensics.open(Path(tmp) / "demo.db", keys.generate(), detectors=[])
-        outcome = run_demo(forensics)
+        blackbox = MemoryBlackbox.open(Path(tmp) / "demo.db", keys.generate(), detectors=[])
+        outcome = run_demo(blackbox)
 
     print("=== memory-blackbox incident replay ===\n")
     print(f"Poison planted:        {outcome.poison_id}")

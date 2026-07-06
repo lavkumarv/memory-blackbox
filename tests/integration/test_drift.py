@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.crypto import keys
 from memory_blackbox.detectors.base import DetectorContext
 from memory_blackbox.detectors.drift import DriftDetector
@@ -45,7 +45,7 @@ def test_hashing_embedder_is_deterministic() -> None:
 
 
 def test_drift_flags_contradicting_untrusted_write(tmp_path: Path) -> None:
-    f = Forensics.open(tmp_path / "l.db", keys.generate(), detectors=[])
+    f = MemoryBlackbox.open(tmp_path / "l.db", keys.generate(), detectors=[])
     f.record_write("The capital of France is Paris", _trusted(), namespace="t")
     f.record_write("Paris is the capital city of France", _trusted(), namespace="t")
     f.record_write("France has its capital in Paris", _trusted(), namespace="t")
@@ -59,7 +59,7 @@ def test_drift_flags_contradicting_untrusted_write(tmp_path: Path) -> None:
 
 
 def test_drift_quiet_without_contradiction(tmp_path: Path) -> None:
-    f = Forensics.open(tmp_path / "l.db", keys.generate(), detectors=[])
+    f = MemoryBlackbox.open(tmp_path / "l.db", keys.generate(), detectors=[])
     f.record_write("The capital of France is Paris", _trusted(), namespace="t")
     f.record_write("Paris is the capital of France indeed", _untrusted(), namespace="t")
     # Untrusted, but agrees with the consensus -> no drift event.
@@ -67,7 +67,7 @@ def test_drift_quiet_without_contradiction(tmp_path: Path) -> None:
 
 
 def test_drift_empty_without_trusted_consensus(tmp_path: Path) -> None:
-    f = Forensics.open(tmp_path / "l.db", keys.generate(), detectors=[])
+    f = MemoryBlackbox.open(tmp_path / "l.db", keys.generate(), detectors=[])
     f.record_write("The capital of France is Berlin", _untrusted(), namespace="t")
     assert drift(f.ledger, "capital of France") == []
 

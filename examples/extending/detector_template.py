@@ -2,7 +2,7 @@
 
 A detector inspects each memory write and returns findings. Copy this file, give it
 a unique ``name``, implement ``inspect``, and either pass an instance to
-``Forensics(..., detectors=[MyDetector()])`` or add it to a detector pack.
+``MemoryBlackbox(..., detectors=[MyDetector()])`` or add it to a detector pack.
 
 Run the smoke check at the bottom:  python examples/extending/detector_template.py
 """
@@ -44,14 +44,14 @@ if __name__ == "__main__":
     import tempfile
     from pathlib import Path
 
-    from memory_blackbox.capture.engine import Forensics
+    from memory_blackbox.capture.engine import MemoryBlackbox
     from memory_blackbox.crypto import keys
     from memory_blackbox.model.records import Source, SourceType
 
     with tempfile.TemporaryDirectory() as tmp:
-        forensics = Forensics.open(
+        blackbox = MemoryBlackbox.open(
             Path(tmp) / "l.db", keys.generate(), detectors=[ShoutingDetector()]
         )
-        forensics.record_write("THIS IS SHOUTING", Source(source_type=SourceType.user_input))
-        forensics.record_write("this is calm", Source(source_type=SourceType.user_input))
-        print("findings:", [(f.detector_name, f.severity.value) for f in forensics.findings])
+        blackbox.record_write("THIS IS SHOUTING", Source(source_type=SourceType.user_input))
+        blackbox.record_write("this is calm", Source(source_type=SourceType.user_input))
+        print("findings:", [(f.detector_name, f.severity.value) for f in blackbox.findings])

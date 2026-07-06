@@ -10,7 +10,7 @@ from typing import Annotated
 import typer
 
 from memory_blackbox import __version__
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.config import Config, resolve_config
 from memory_blackbox.crypto import keys
 from memory_blackbox.ledger.store import LedgerStore
@@ -37,7 +37,7 @@ def _init_profile(config: Config) -> keys.KeyPair:
     return keypair
 
 
-def _open(config: Config) -> Forensics:
+def _open(config: Config) -> MemoryBlackbox:
     if not config.key_path.exists():
         typer.secho(
             f"No profile at {config.home}. Run `memory-blackbox init` first.",
@@ -45,7 +45,7 @@ def _open(config: Config) -> Forensics:
             err=True,
         )
         raise typer.Exit(code=2)
-    return Forensics.open(config.ledger_path, keys.load(config.key_path))
+    return MemoryBlackbox.open(config.ledger_path, keys.load(config.key_path))
 
 
 @app.callback()
@@ -78,8 +78,8 @@ def demo() -> None:
     from memory_blackbox.demo import run_demo
 
     with tempfile.TemporaryDirectory() as tmp:
-        forensics = Forensics.open(Path(tmp) / "demo.db", keys.generate(), detectors=[])
-        outcome = run_demo(forensics)
+        blackbox = MemoryBlackbox.open(Path(tmp) / "demo.db", keys.generate(), detectors=[])
+        outcome = run_demo(blackbox)
 
     typer.echo("=== memory-blackbox incident replay ===\n")
     typer.echo(f"Poison planted:        {outcome.poison_id}")
@@ -110,8 +110,8 @@ def verify(home: HomeOption = None) -> None:
     """Verify ledger integrity; exit nonzero on tamper."""
     from memory_blackbox.query.verify import verify as verify_ledger
 
-    forensics = _open(resolve_config(home))
-    report = verify_ledger(forensics.ledger)
+    blackbox = _open(resolve_config(home))
+    report = verify_ledger(blackbox.ledger)
     if report.ok:
         typer.secho(f"OK: {report.summary}", fg=typer.colors.GREEN)
     else:
@@ -129,8 +129,8 @@ def trace(
     from memory_blackbox.exporters import mermaid
     from memory_blackbox.query.trace import trace as trace_action
 
-    forensics = _open(resolve_config(home))
-    result = trace_action(forensics.ledger, forensics.dag, action)
+    blackbox = _open(resolve_config(home))
+    result = trace_action(blackbox.ledger, blackbox.dag, action)
     if fmt == "json":
         typer.echo(
             json.dumps(
@@ -142,7 +142,7 @@ def trace(
             )
         )
     elif fmt == "mermaid":
-        edges = forensics.dag.subgraph_edges(result.ancestors | {action})
+        edges = blackbox.dag.subgraph_edges(result.ancestors | {action})
         typer.echo(mermaid.provenance_graph(edges))
     else:
         if result.primary is None:
@@ -162,8 +162,8 @@ def blast_radius_cmd(
     """Compute the blast radius of a poisoned source."""
     from memory_blackbox.query.blast_radius import blast_radius
 
-    forensics = _open(resolve_config(home))
-    affected = blast_radius(forensics.ledger, forensics.dag, source)
+    blackbox = _open(resolve_config(home))
+    affected = blast_radius(blackbox.ledger, blackbox.dag, source)
     typer.echo(f"{len(affected)} record(s) influenced by '{source}':")
     for record_id in sorted(affected):
         typer.echo(f"  {record_id}")
@@ -177,8 +177,8 @@ def drift(
     """Detect belief-drift events for a topic."""
     from memory_blackbox.query.drift import drift as drift_query
 
-    forensics = _open(resolve_config(home))
-    events = drift_query(forensics.ledger, topic)
+    blackbox = _open(resolve_config(home))
+    events = drift_query(blackbox.ledger, topic)
     if not events:
         typer.echo("No drift events found.")
     for event in events:
@@ -195,8 +195,8 @@ def timeline(
     """Show the chronological timeline of events for a topic."""
     from memory_blackbox.query.timeline import timeline as timeline_query
 
-    forensics = _open(resolve_config(home))
-    for event in timeline_query(forensics.ledger, topic):
+    blackbox = _open(resolve_config(home))
+    for event in timeline_query(blackbox.ledger, topic):
         typer.echo(f"{event.timestamp}  [{event.kind}]  {event.text[:80]}")
 
 
@@ -210,9 +210,9 @@ def rollback(
     """Plan or apply a rollback of a poisoned source and its closure."""
     from memory_blackbox.query.rollback import rollback as do_rollback
 
-    forensics = _open(resolve_config(home))
+    blackbox = _open(resolve_config(home))
     plan = do_rollback(
-        forensics.ledger, forensics.dag, to, scope=scope, dry_run=not apply, reason="cli rollback"
+        blackbox.ledger, blackbox.dag, to, scope=scope, dry_run=not apply, reason="cli rollback"
     )
     verb = "Applied" if plan.applied else "Dry-run"
     typer.echo(f"{verb}: {plan.count} record(s) to roll back" + (f" in {scope}" if scope else ""))
@@ -233,15 +233,15 @@ def report(
     from memory_blackbox.query.trace import trace as trace_action
     from memory_blackbox.query.verify import verify as verify_ledger
 
-    forensics = _open(resolve_config(home))
-    tr = trace_action(forensics.ledger, forensics.dag, incident)
+    blackbox = _open(resolve_config(home))
+    tr = trace_action(blackbox.ledger, blackbox.dag, incident)
     selector = tr.primary.source_id if tr.primary and tr.primary.source_id else incident
-    blast = blast_radius(forensics.ledger, forensics.dag, selector)
-    plan = do_rollback(forensics.ledger, forensics.dag, selector, dry_run=True)
-    integrity = verify_ledger(forensics.ledger)
+    blast = blast_radius(blackbox.ledger, blackbox.dag, selector)
+    plan = do_rollback(blackbox.ledger, blackbox.dag, selector, dry_run=True)
+    integrity = verify_ledger(blackbox.ledger)
 
     if fmt == "sarif":
-        typer.echo(json.dumps(sarif.findings_to_sarif(forensics.findings, __version__)))
+        typer.echo(json.dumps(sarif.findings_to_sarif(blackbox.findings, __version__)))
     elif fmt == "json":
         typer.echo(
             json.dumps(
@@ -272,9 +272,9 @@ def reconcile(
     """Flag backend entries that have no corresponding ledger record."""
     from memory_blackbox.adapters.base import reconcile as do_reconcile
 
-    forensics = _open(resolve_config(home))
+    blackbox = _open(resolve_config(home))
     backend_ids = [line.strip() for line in ids_file.read_text().splitlines() if line.strip()]
-    orphans = do_reconcile(forensics.ledger, backend_ids)
+    orphans = do_reconcile(blackbox.ledger, backend_ids)
     if not orphans:
         typer.secho(
             "No orphan entries: every backend id has a ledger record.", fg=typer.colors.GREEN

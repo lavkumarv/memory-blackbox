@@ -13,7 +13,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from memory_blackbox.capture.engine import Forensics
+    from memory_blackbox.capture.engine import MemoryBlackbox
     from memory_blackbox.model.records import ProvenanceRecord, RetrievalRecord, Source
 
 BACKEND_NAME = "pgvector"
@@ -22,8 +22,8 @@ BACKEND_NAME = "pgvector"
 class PgVectorCapture:
     """Explicit capture helpers for a pgvector-backed store."""
 
-    def __init__(self, forensics: Forensics, namespace: str, default_source: Source) -> None:
-        self._forensics = forensics
+    def __init__(self, blackbox: MemoryBlackbox, namespace: str, default_source: Source) -> None:
+        self._blackbox = blackbox
         self._namespace = namespace
         self._default_source = default_source
 
@@ -31,7 +31,7 @@ class PgVectorCapture:
         self, content: str, row_id: str, *, source: Source | None = None
     ) -> ProvenanceRecord:
         """Record a row inserted into the pgvector table."""
-        return self._forensics.record_write(
+        return self._blackbox.record_write(
             content,
             source or self._default_source,
             namespace=self._namespace,
@@ -42,6 +42,6 @@ class PgVectorCapture:
         self, query: str, returned: Sequence[str], scores: Sequence[float] = ()
     ) -> RetrievalRecord:
         """Record a similarity query against the pgvector table."""
-        return self._forensics.record_retrieval(
+        return self._blackbox.record_retrieval(
             query, list(returned), list(scores), namespace=self._namespace
         )

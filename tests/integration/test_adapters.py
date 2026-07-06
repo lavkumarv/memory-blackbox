@@ -16,7 +16,7 @@ from memory_blackbox.adapters.letta_ import letta_adapter
 from memory_blackbox.adapters.mem0_ import mem0_adapter
 from memory_blackbox.adapters.memory_md import MemoryMdAdapter
 from memory_blackbox.adapters.pgvector_ import PgVectorCapture
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.crypto import keys
 from memory_blackbox.model.records import Source, SourceType
 
@@ -26,8 +26,8 @@ def _src() -> Source:
 
 
 @pytest.fixture
-def forensics(tmp_path: Path) -> Forensics:
-    return Forensics.open(tmp_path / "l.db", keys.generate(), detectors=[])
+def blackbox(tmp_path: Path) -> MemoryBlackbox:
+    return MemoryBlackbox.open(tmp_path / "l.db", keys.generate(), detectors=[])
 
 
 # -- Mem0 (fake mimics mem0ai Memory) ---------------------------------------
@@ -43,14 +43,12 @@ class FakeMem0:
         return {"results": [{"id": "mem0-1", "score": 0.91}]}
 
 
-def test_mem0_adapter_round_trip(forensics: Forensics) -> None:
-    client = forensics.wrap_adapter(
-        FakeMem0(), mem0_adapter(), namespace="t", default_source=_src()
-    )
+def test_mem0_adapter_round_trip(blackbox: MemoryBlackbox) -> None:
+    client = blackbox.wrap_adapter(FakeMem0(), mem0_adapter(), namespace="t", default_source=_src())
     client.add("the capital of France is Paris")
     client.search("capital of France")
 
-    rows = list(forensics.ledger.rows())
+    rows = list(blackbox.ledger.rows())
     write = next(r for r in rows if r["kind"] == "write")
     retrieval = next(r for r in rows if r["kind"] == "retrieval")
     assert '"memory_id":"mem0-1"' in write["payload_json"]
@@ -66,14 +64,14 @@ class FakeChroma:
         return {"ids": [["c-1", "c-2"]], "distances": [[0.1, 0.2]]}
 
 
-def test_chroma_adapter_round_trip(forensics: Forensics) -> None:
-    client = forensics.wrap_adapter(
+def test_chroma_adapter_round_trip(blackbox: MemoryBlackbox) -> None:
+    client = blackbox.wrap_adapter(
         FakeChroma(), chroma_adapter(), namespace="t", default_source=_src()
     )
     client.add(documents=["doc text"], ids=["c-1"])
     client.query(query_texts=["find it"])
 
-    rows = list(forensics.ledger.rows())
+    rows = list(blackbox.ledger.rows())
     write = next(r for r in rows if r["kind"] == "write")
     retrieval = next(r for r in rows if r["kind"] == "retrieval")
     assert '"memory_id":"c-1"' in write["payload_json"]
@@ -89,33 +87,33 @@ class FakeLetta:
         return [{"id": "letta-1", "text": "recalled"}]
 
 
-def test_letta_adapter_round_trip(forensics: Forensics) -> None:
-    client = forensics.wrap_adapter(
+def test_letta_adapter_round_trip(blackbox: MemoryBlackbox) -> None:
+    client = blackbox.wrap_adapter(
         FakeLetta(), letta_adapter(), namespace="t", default_source=_src()
     )
     client.insert_archival_memory("agent-1", "remember this fact")
     client.get_archival_memory("agent-1", "what fact?")
 
-    rows = list(forensics.ledger.rows())
+    rows = list(blackbox.ledger.rows())
     write = next(r for r in rows if r["kind"] == "write")
     assert '"memory_id":"letta-1"' in write["payload_json"]
 
 
 # -- pgvector (explicit capture helpers) ------------------------------------
-def test_pgvector_capture_helpers(forensics: Forensics) -> None:
-    cap = PgVectorCapture(forensics, namespace="t", default_source=_src())
+def test_pgvector_capture_helpers(blackbox: MemoryBlackbox) -> None:
+    cap = PgVectorCapture(blackbox, namespace="t", default_source=_src())
     write = cap.record_insert("embedded row content", row_id="pg-1")
     cap.record_query("nearest neighbours", returned=["pg-1"], scores=[0.05])
     assert write.memory_id == "pg-1"
-    assert forensics.ledger.count() == 2
+    assert blackbox.ledger.count() == 2
 
 
 # -- memory_md (CVE-2026-21852 surface) -------------------------------------
-def test_memory_md_captures_postinstall_edit(tmp_path: Path, forensics: Forensics) -> None:
+def test_memory_md_captures_postinstall_edit(tmp_path: Path, blackbox: MemoryBlackbox) -> None:
     memory_file = tmp_path / "MEMORY.md"
     memory_file.write_text("# Project memory\n- use https for all requests\n")
 
-    adapter = MemoryMdAdapter(forensics, tmp_path)
+    adapter = MemoryMdAdapter(blackbox, tmp_path)
     adapter.baseline()  # trust the current contents
     assert adapter.scan() == []  # no change yet
 
@@ -132,18 +130,18 @@ def test_memory_md_captures_postinstall_edit(tmp_path: Path, forensics: Forensic
     assert "evil.test" in records[0].content
 
 
-def test_memory_md_ignores_unchanged_files(tmp_path: Path, forensics: Forensics) -> None:
+def test_memory_md_ignores_unchanged_files(tmp_path: Path, blackbox: MemoryBlackbox) -> None:
     (tmp_path / "CLAUDE.md").write_text("stable content")
-    adapter = MemoryMdAdapter(forensics, tmp_path)
+    adapter = MemoryMdAdapter(blackbox, tmp_path)
     first = adapter.scan()  # first sight -> recorded once
     assert len(first) == 1
     assert adapter.scan() == []  # unchanged -> nothing
 
 
 # -- reconciliation ---------------------------------------------------------
-def test_reconcile_flags_orphan_backend_entries(forensics: Forensics) -> None:
+def test_reconcile_flags_orphan_backend_entries(blackbox: MemoryBlackbox) -> None:
     # One write goes through capture (tracked); another is inserted directly (orphan).
-    forensics.record_write("tracked", _src(), namespace="t", memory_id="kept-1")
+    blackbox.record_write("tracked", _src(), namespace="t", memory_id="kept-1")
     backend_ids = ["kept-1", "orphan-99"]
-    orphans = reconcile(forensics.ledger, backend_ids)
+    orphans = reconcile(blackbox.ledger, backend_ids)
     assert orphans == ["orphan-99"]

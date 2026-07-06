@@ -7,7 +7,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.cli import app
 from memory_blackbox.config import resolve_config
 from memory_blackbox.crypto import keys
@@ -44,9 +44,9 @@ def test_init_is_idempotent(tmp_path: Path) -> None:
 def test_verify_ok_exit_zero(tmp_path: Path) -> None:
     runner.invoke(app, ["init", "--home", str(tmp_path)])
     config = resolve_config(tmp_path)
-    forensics = Forensics.open(config.ledger_path, keys.load(config.key_path), detectors=[])
-    forensics.record_write("a fact", Source(source_type=SourceType.user_input))
-    forensics.ledger.close()
+    blackbox = MemoryBlackbox.open(config.ledger_path, keys.load(config.key_path), detectors=[])
+    blackbox.record_write("a fact", Source(source_type=SourceType.user_input))
+    blackbox.ledger.close()
 
     result = runner.invoke(app, ["verify", "--home", str(tmp_path)])
     assert result.exit_code == 0
@@ -56,10 +56,10 @@ def test_verify_ok_exit_zero(tmp_path: Path) -> None:
 def test_verify_exits_nonzero_on_tamper(tmp_path: Path) -> None:
     runner.invoke(app, ["init", "--home", str(tmp_path)])
     config = resolve_config(tmp_path)
-    forensics = Forensics.open(config.ledger_path, keys.load(config.key_path), detectors=[])
+    blackbox = MemoryBlackbox.open(config.ledger_path, keys.load(config.key_path), detectors=[])
     for i in range(3):
-        forensics.record_write(f"e{i}", Source(source_type=SourceType.user_input))
-    forensics.ledger.close()
+        blackbox.record_write(f"e{i}", Source(source_type=SourceType.user_input))
+    blackbox.ledger.close()
 
     con = sqlite3.connect(str(config.ledger_path))
     con.executescript("DROP TRIGGER IF EXISTS ledger_no_update;")
@@ -79,12 +79,12 @@ def test_verify_without_profile_errors(tmp_path: Path) -> None:
 def test_trace_blast_rollback_commands(tmp_path: Path) -> None:
     runner.invoke(app, ["init", "--home", str(tmp_path)])
     config = resolve_config(tmp_path)
-    forensics = Forensics.open(config.ledger_path, keys.load(config.key_path), detectors=[])
+    blackbox = MemoryBlackbox.open(config.ledger_path, keys.load(config.key_path), detectors=[])
     poison_src = Source(source_id="evil", source_type=SourceType.document_ingest, locator="x")
-    poison = forensics.record_write("poison", poison_src, namespace="t")
-    ret = forensics.record_retrieval("q", returned=[poison.record_id], namespace="t")
-    action = forensics.record_action("act", "did it", context_retrievals=[ret.retrieval_id])
-    forensics.ledger.close()
+    poison = blackbox.record_write("poison", poison_src, namespace="t")
+    ret = blackbox.record_retrieval("q", returned=[poison.record_id], namespace="t")
+    action = blackbox.record_action("act", "did it", context_retrievals=[ret.retrieval_id])
+    blackbox.ledger.close()
 
     traced = runner.invoke(app, ["trace", "--action", action.action_id, "--home", str(tmp_path)])
     assert traced.exit_code == 0
@@ -102,9 +102,9 @@ def test_trace_blast_rollback_commands(tmp_path: Path) -> None:
 def test_reconcile_flags_orphans(tmp_path: Path) -> None:
     runner.invoke(app, ["init", "--home", str(tmp_path)])
     config = resolve_config(tmp_path)
-    forensics = Forensics.open(config.ledger_path, keys.load(config.key_path), detectors=[])
-    forensics.record_write("tracked", Source(source_type=SourceType.user_input), memory_id="kept")
-    forensics.ledger.close()
+    blackbox = MemoryBlackbox.open(config.ledger_path, keys.load(config.key_path), detectors=[])
+    blackbox.record_write("tracked", Source(source_type=SourceType.user_input), memory_id="kept")
+    blackbox.ledger.close()
 
     ids_file = tmp_path / "ids.txt"
     ids_file.write_text("kept\norphan-1\n")

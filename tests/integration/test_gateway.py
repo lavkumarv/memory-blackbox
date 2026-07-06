@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.capture.gateway import McpGateway
 from memory_blackbox.capture.wrapper import CallCtx, ReadMap, WriteMap
 from memory_blackbox.crypto import keys
@@ -32,11 +32,11 @@ class FakeMcpMemoryServer:
 
 
 @pytest.fixture
-def forensics(tmp_path: Path) -> Forensics:
-    return Forensics.open(tmp_path / "l.db", keys.generate(), detectors=[])
+def blackbox(tmp_path: Path) -> MemoryBlackbox:
+    return MemoryBlackbox.open(tmp_path / "l.db", keys.generate(), detectors=[])
 
 
-def _gateway(forensics: Forensics, server: FakeMcpMemoryServer) -> McpGateway:
+def _gateway(blackbox: MemoryBlackbox, server: FakeMcpMemoryServer) -> McpGateway:
     write_tools = {
         "create_memory": WriteMap(
             content=lambda c: str(c.kwargs.get("content", "")),
@@ -50,7 +50,7 @@ def _gateway(forensics: Forensics, server: FakeMcpMemoryServer) -> McpGateway:
         )
     }
     return McpGateway(
-        forensics,
+        blackbox,
         server.call,
         namespace="t",
         default_source=Source(
@@ -61,9 +61,9 @@ def _gateway(forensics: Forensics, server: FakeMcpMemoryServer) -> McpGateway:
     )
 
 
-def test_write_tool_call_is_logged_and_forwarded_unchanged(forensics: Forensics) -> None:
+def test_write_tool_call_is_logged_and_forwarded_unchanged(blackbox: MemoryBlackbox) -> None:
     server = FakeMcpMemoryServer()
-    gateway = _gateway(forensics, server)
+    gateway = _gateway(blackbox, server)
 
     response = gateway.call_tool("create_memory", {"content": "the capital of France is Paris"})
 
@@ -71,34 +71,34 @@ def test_write_tool_call_is_logged_and_forwarded_unchanged(forensics: Forensics)
     assert response == {"id": "node-1", "status": "ok"}
     assert server.calls == [("create_memory", {"content": "the capital of France is Paris"})]
     # And a provenance write was logged with the round-tripped memory id.
-    write = next(r for r in forensics.ledger.rows() if r["kind"] == "write")
+    write = next(r for r in blackbox.ledger.rows() if r["kind"] == "write")
     assert '"memory_id":"node-1"' in write["payload_json"]
 
 
-def test_read_tool_call_is_logged_and_forwarded_unchanged(forensics: Forensics) -> None:
+def test_read_tool_call_is_logged_and_forwarded_unchanged(blackbox: MemoryBlackbox) -> None:
     server = FakeMcpMemoryServer()
-    gateway = _gateway(forensics, server)
+    gateway = _gateway(blackbox, server)
     gateway.call_tool("create_memory", {"content": "Paris"})
 
     response = gateway.call_tool("search_memory", {"query": "capital of France"})
 
     assert response == {"matches": [{"id": "node-1", "score": 0.8}]}
-    retrieval = next(r for r in forensics.ledger.rows() if r["kind"] == "retrieval")
+    retrieval = next(r for r in blackbox.ledger.rows() if r["kind"] == "retrieval")
     assert "node-1" in retrieval["payload_json"]
 
 
-def test_unmapped_tool_is_forwarded_without_logging(forensics: Forensics) -> None:
+def test_unmapped_tool_is_forwarded_without_logging(blackbox: MemoryBlackbox) -> None:
     server = FakeMcpMemoryServer()
-    gateway = _gateway(forensics, server)
+    gateway = _gateway(blackbox, server)
     response = gateway.call_tool("ping", {})
     assert response == {"status": "ok"}
-    assert forensics.ledger.count() == 0
+    assert blackbox.ledger.count() == 0
 
 
-def test_response_object_identity_preserved(forensics: Forensics) -> None:
+def test_response_object_identity_preserved(blackbox: MemoryBlackbox) -> None:
     sentinel = {"id": "x", "payload": object()}
     gateway = McpGateway(
-        forensics,
+        blackbox,
         lambda name, args: sentinel,
         namespace="t",
         default_source=Source(source_id="mcp", source_type=SourceType.tool_output),

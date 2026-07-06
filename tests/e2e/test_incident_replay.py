@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.crypto import keys
 from memory_blackbox.demo import DemoOutcome, run_demo
 from memory_blackbox.query.verify import verify
@@ -19,8 +19,8 @@ from memory_blackbox.query.verify import verify
 
 @pytest.fixture
 def outcome(tmp_path: Path) -> DemoOutcome:
-    forensics = Forensics.open(tmp_path / "ledger.db", keys.generate(), detectors=[])
-    return run_demo(forensics)
+    blackbox = MemoryBlackbox.open(tmp_path / "ledger.db", keys.generate(), detectors=[])
+    return run_demo(blackbox)
 
 
 def test_harmful_action_occurs_before_rollback(outcome: DemoOutcome) -> None:
@@ -50,9 +50,9 @@ def test_ledger_verifies_throughout(outcome: DemoOutcome) -> None:
 
 def test_rollback_did_not_delete_history(tmp_path: Path) -> None:
     # Append-only holds: rollback appends a RollbackEvent rather than deleting.
-    forensics = Forensics.open(tmp_path / "l.db", keys.generate(), detectors=[])
-    before_writes = forensics.ledger.count()
-    run_demo(forensics)
+    blackbox = MemoryBlackbox.open(tmp_path / "l.db", keys.generate(), detectors=[])
+    before_writes = blackbox.ledger.count()
+    run_demo(blackbox)
     # Many rows added, none removed, and the chain + Merkle still verify.
-    assert forensics.ledger.count() > before_writes
-    assert verify(forensics.ledger).ok
+    assert blackbox.ledger.count() > before_writes
+    assert verify(blackbox.ledger).ok

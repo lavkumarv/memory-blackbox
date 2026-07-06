@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.crypto import keys
 from memory_blackbox.model.records import Source, SourceType, TrustLevel
 from memory_blackbox.query.blast_radius import blast_radius
@@ -21,7 +21,7 @@ from memory_blackbox.query.verify import verify
 
 @dataclass
 class Incident:
-    forensics: Forensics
+    blackbox: MemoryBlackbox
     poison: str
     derived: str
     retrieval: str
@@ -30,7 +30,7 @@ class Incident:
 
 @pytest.fixture
 def incident(tmp_path: Path) -> Incident:
-    f = Forensics.open(tmp_path / "ledger.db", keys.generate())
+    f = MemoryBlackbox.open(tmp_path / "ledger.db", keys.generate())
     poison_src = Source(
         source_id="evil-doc",
         source_type=SourceType.document_ingest,
@@ -49,7 +49,7 @@ def incident(tmp_path: Path) -> Incident:
 
 
 def test_trace_returns_poison_root_ranked_first(incident: Incident) -> None:
-    result = trace(incident.forensics.ledger, incident.forensics.dag, incident.action)
+    result = trace(incident.blackbox.ledger, incident.blackbox.dag, incident.action)
     assert result.primary is not None
     assert result.primary.record_id == incident.poison
     assert result.primary.trust_level == "untrusted"
@@ -57,26 +57,26 @@ def test_trace_returns_poison_root_ranked_first(incident: Incident) -> None:
 
 
 def test_blast_radius_equals_hand_computed_set(incident: Incident) -> None:
-    affected = blast_radius(incident.forensics.ledger, incident.forensics.dag, "evil-doc")
+    affected = blast_radius(incident.blackbox.ledger, incident.blackbox.dag, "evil-doc")
     assert affected == {incident.poison, incident.derived, incident.retrieval, incident.action}
 
 
 def test_blast_radius_unknown_source_is_empty(incident: Incident) -> None:
-    assert blast_radius(incident.forensics.ledger, incident.forensics.dag, "ghost") == set()
+    assert blast_radius(incident.blackbox.ledger, incident.blackbox.dag, "ghost") == set()
 
 
 def test_timeline_is_chronological(incident: Incident) -> None:
-    events = timeline(incident.forensics.ledger, "France")
+    events = timeline(incident.blackbox.ledger, "France")
     assert [e.timestamp for e in events] == sorted(e.timestamp for e in events)
     assert events[0].record_id == incident.poison
 
 
 def test_verify_passes_on_clean_ledger(incident: Incident) -> None:
-    assert verify(incident.forensics.ledger).ok
+    assert verify(incident.blackbox.ledger).ok
 
 
 def test_rollback_dry_run_lists_poison_and_closure(incident: Incident) -> None:
-    plan = rollback(incident.forensics.ledger, incident.forensics.dag, "evil-doc", scope="t")
+    plan = rollback(incident.blackbox.ledger, incident.blackbox.dag, "evil-doc", scope="t")
     assert plan.dry_run and not plan.applied
     assert set(plan.affected) == {
         incident.poison,
@@ -87,11 +87,11 @@ def test_rollback_dry_run_lists_poison_and_closure(incident: Incident) -> None:
 
 
 def test_rollback_apply_marks_rolled_back_and_preserves_verify(incident: Incident) -> None:
-    ledger = incident.forensics.ledger
+    ledger = incident.blackbox.ledger
     before = ledger.count()
 
     applied = rollback(
-        ledger, incident.forensics.dag, "evil-doc", scope="t", dry_run=False, reason="poison"
+        ledger, incident.blackbox.dag, "evil-doc", scope="t", dry_run=False, reason="poison"
     )
     assert applied.applied and applied.rollback_id is not None
 
@@ -105,7 +105,7 @@ def test_rollback_apply_marks_rolled_back_and_preserves_verify(incident: Inciden
 
 
 def test_rollback_scope_filters_namespace(tmp_path: Path) -> None:
-    f = Forensics.open(tmp_path / "l.db", keys.generate())
+    f = MemoryBlackbox.open(tmp_path / "l.db", keys.generate())
     src = Source(source_id="s", source_type=SourceType.document_ingest)
     a = f.record_write("in scope", src, namespace="ns1")
     f.record_write("out of scope", src, namespace="ns2")
@@ -114,7 +114,7 @@ def test_rollback_scope_filters_namespace(tmp_path: Path) -> None:
 
 
 def test_verify_detects_tamper_through_query(tmp_path: Path) -> None:
-    f = Forensics.open(tmp_path / "l.db", keys.generate())
+    f = MemoryBlackbox.open(tmp_path / "l.db", keys.generate())
     src = Source(source_id="s", source_type=SourceType.user_input)
     for i in range(3):
         f.record_write(f"e{i}", src)
@@ -133,11 +133,11 @@ def test_verify_detects_tamper_through_query(tmp_path: Path) -> None:
 
 
 def test_drift_placeholder_returns_empty(incident: Incident) -> None:
-    assert drift(incident.forensics.ledger, "France") == []
+    assert drift(incident.blackbox.ledger, "France") == []
 
 
 def test_integrity_report_summary_ok_and_tampered(tmp_path: Path) -> None:
-    f = Forensics.open(tmp_path / "l.db", keys.generate())
+    f = MemoryBlackbox.open(tmp_path / "l.db", keys.generate())
     src = Source(source_id="s", source_type=SourceType.user_input)
     for i in range(3):
         f.record_write(f"e{i}", src)
@@ -151,7 +151,7 @@ def test_integrity_report_summary_ok_and_tampered(tmp_path: Path) -> None:
     con.commit()
     con.close()
 
-    reopened = Forensics.open(tmp_path / "l.db", keys.generate())
+    reopened = MemoryBlackbox.open(tmp_path / "l.db", keys.generate())
     report = verify(reopened.ledger, public_key)
     assert not report.ok
     assert "edit" in report.summary
@@ -160,8 +160,8 @@ def test_integrity_report_summary_ok_and_tampered(tmp_path: Path) -> None:
 def test_rollback_by_record_id_with_no_scope(incident: Incident) -> None:
     # `to` is a concrete record id (not a source selector); scope=None covers all namespaces.
     plan = rollback(
-        incident.forensics.ledger,
-        incident.forensics.dag,
+        incident.blackbox.ledger,
+        incident.blackbox.dag,
         incident.poison,
         scope=None,
         dry_run=False,
@@ -172,5 +172,5 @@ def test_rollback_by_record_id_with_no_scope(incident: Incident) -> None:
 
 def test_effective_state_active_and_unknown(incident: Incident) -> None:
     # A record not touched by any rollback is active; an unknown id is expired.
-    assert effective_state(incident.forensics.ledger, incident.poison) == "active"
-    assert effective_state(incident.forensics.ledger, "no-such-id") == "expired"
+    assert effective_state(incident.blackbox.ledger, incident.poison) == "active"
+    assert effective_state(incident.blackbox.ledger, "no-such-id") == "expired"

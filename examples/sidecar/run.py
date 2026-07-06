@@ -21,7 +21,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.capture.sidecar import PROVENANCE_TAG, Sidecar
 from memory_blackbox.capture.wrapper import ReadMap, WriteMap
 from memory_blackbox.crypto import keys
@@ -45,11 +45,11 @@ class FakeVectorDB:
 
 def main() -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        forensics = Forensics.open(Path(tmp) / "sidecar.db", keys.generate(), detectors=[])
+        blackbox = MemoryBlackbox.open(Path(tmp) / "sidecar.db", keys.generate(), detectors=[])
         vector_db = FakeVectorDB()
 
         sidecar = Sidecar(
-            forensics,
+            blackbox,
             vector_db,  # forward(op, payload) -> result
             namespace="agent",
             default_source=Source(
@@ -77,9 +77,7 @@ def main() -> None:
     print("  query  ->", queried)
     print(f"\nThe forwarded upsert was tagged with '{PROVENANCE_TAG}':")
     print("  ", vector_db.last_upsert)
-    print(
-        f"\nProvenance captured: {forensics.ledger.count()} ledger record(s), signed and chained."
-    )
+    print(f"\nProvenance captured: {blackbox.ledger.count()} ledger record(s), signed and chained.")
 
 
 if __name__ == "__main__":

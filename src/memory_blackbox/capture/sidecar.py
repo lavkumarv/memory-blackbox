@@ -19,7 +19,7 @@ from memory_blackbox.capture.wrapper import CallCtx
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from memory_blackbox.capture.engine import Forensics
+    from memory_blackbox.capture.engine import MemoryBlackbox
     from memory_blackbox.capture.wrapper import ReadMap, WriteMap
     from memory_blackbox.model.records import Source
 
@@ -31,7 +31,7 @@ class Sidecar:
 
     def __init__(
         self,
-        forensics: Forensics,
+        blackbox: MemoryBlackbox,
         forward: Callable[[str, dict[str, Any]], Any],
         *,
         namespace: str,
@@ -39,7 +39,7 @@ class Sidecar:
         upsert_ops: dict[str, WriteMap],
         query_ops: dict[str, ReadMap],
     ) -> None:
-        self._forensics = forensics
+        self._blackbox = blackbox
         self._forward = forward
         self._namespace = namespace
         self._default_source = default_source
@@ -57,7 +57,7 @@ class Sidecar:
     def _handle_upsert(self, op: str, payload: dict[str, Any]) -> Any:
         spec = self._upsert_ops[op]
         # Tag the request before forwarding so the stored vector references the ledger.
-        record = self._forensics.record_write(
+        record = self._blackbox.record_write(
             spec.content(CallCtx(args=(), kwargs=payload, result=None)),
             self._default_source,
             namespace=self._namespace,
@@ -70,7 +70,7 @@ class Sidecar:
         spec = self._query_ops[op]
         result = self._forward(op, payload)
         ctx = CallCtx(args=(), kwargs=payload, result=result)
-        self._forensics.record_retrieval(
+        self._blackbox.record_retrieval(
             spec.query(ctx),
             list(spec.returned(ctx)),
             list(spec.scores(ctx)),

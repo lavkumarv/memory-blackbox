@@ -98,17 +98,17 @@ ledger, DAG, and queries are identical underneath.
 Wrap your memory client in-process; calls are captured and forwarded unchanged.
 
 ```python
-from memory_blackbox.capture.engine import Forensics
+from memory_blackbox.capture.engine import MemoryBlackbox
 from memory_blackbox.crypto import keys
 from memory_blackbox.adapters.mem0_ import mem0_adapter
 from memory_blackbox.model.records import Source, SourceType, TrustLevel
 
 from mem0 import Memory  # your real client
 
-forensics = Forensics.open("forensics.db", keys.generate())
+blackbox = MemoryBlackbox.open("blackbox.db", keys.generate())
 source = Source(source_type=SourceType.document_ingest, trust_level=TrustLevel.untrusted)
 
-memory = forensics.wrap_adapter(
+memory = blackbox.wrap_adapter(
     Memory(), mem0_adapter(), namespace="agent", default_source=source,
 )
 
@@ -142,7 +142,7 @@ from memory_blackbox.capture.gateway import McpGateway
 from memory_blackbox.capture.wrapper import WriteMap, ReadMap
 
 gateway = McpGateway(
-    forensics,
+    blackbox,
     forward=mcp_server.call,            # (tool_name, arguments) -> result, your real MCP server
     namespace="agent",
     default_source=source,
@@ -174,7 +174,7 @@ from memory_blackbox.capture.sidecar import Sidecar
 from memory_blackbox.capture.wrapper import WriteMap, ReadMap
 
 sidecar = Sidecar(
-    forensics,
+    blackbox,
     forward=vector_db.call,             # (op, payload) -> result, your hosted DB's HTTP/gRPC API
     namespace="agent",
     default_source=source,

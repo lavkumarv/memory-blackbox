@@ -39,15 +39,21 @@
 | Source poisoning over time | `trust_scoring`, `drift`, `write_rate` detectors | `detectors/` |
 | Key at rest | 0600 file (local) / KMS/HSM (server); only public key exposed | `crypto/keys.py` |
 | Sensitive content at rest | encryption-at-rest, hash-only storage, redaction (planned) | roadmap |
+| Rollback to an earlier checkpoint | external anchoring to an append-only log | `anchor/` |
 
 ## Residual risk
 
 - The window between an event and its Merkle-root checkpoint is a small gap; checkpoint cadence is a
-  tunable trade-off between overhead and tamper-detection latency. External anchoring closes the gap
-  for high-assurance deployments.
-- **Checkpoint truncation under raw file access (v1).** With the local-only `NoOpAnchor`, verification
-  trusts the latest local signed checkpoint. An attacker with raw database access who deletes the
-  latest checkpoint rows can truncate the ledger back to an earlier checkpoint and pass both chain and
-  Merkle verification — without forging the signing key. Edits, gaps, and truncation *past* the latest
-  checkpoint are still caught. External anchoring (publishing roots to a transparency log) is the
-  documented mitigation and removes this gap; see `merkle/anchor.py`.
+  tunable trade-off between overhead and tamper-detection latency.
+- **Checkpoint truncation under raw file access.** With the default local-only `NoOpAnchor`,
+  verification trusts the latest local signed checkpoint. An attacker with raw database access who
+  deletes the latest checkpoint rows can truncate the ledger back to an earlier checkpoint and pass
+  both chain and Merkle verification — without forging the signing key. Edits, gaps, and truncation
+  *past* the latest checkpoint are still caught.
+
+  **Mitigated by external anchoring** (`memory-blackbox anchor`, `verify --anchor`), which publishes
+  each signed checkpoint to an append-only log outside the host. Publication cannot be retracted, so a
+  truncated ledger leaves a witness it can no longer produce. Two residual limits remain: rows written
+  since the last anchor are unwitnessed, so anchoring cadence bounds how much history can be quietly
+  removed; and the guarantee is only as strong as the log's independence from the ledger host — a file
+  witness on the same disk buys nothing. See [`anchoring.md`](anchoring.md).

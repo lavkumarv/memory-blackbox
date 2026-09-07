@@ -218,7 +218,9 @@ memory-blackbox trace --action <id> [--format ...]    action → root cause
 memory-blackbox blast-radius --source <selector>      forward closure of a source
 memory-blackbox drift --topic <text>                  consensus-flip events
 memory-blackbox timeline --topic <text>               ordered narrative
-memory-blackbox verify                                integrity check (nonzero exit on tamper)
+memory-blackbox verify [--anchor]                      integrity check (nonzero exit on tamper)
+memory-blackbox anchor --backend file|rekor           publish a checkpoint to an external log
+memory-blackbox anchor-status                         what the external log witnesses
 memory-blackbox rollback --to <sel> [--apply]         dry-run or apply a rollback
 memory-blackbox report --incident <id> --format ...   md | json | sarif report
 memory-blackbox reconcile --ids-file <path>           flag store entries with no ledger record
@@ -229,8 +231,23 @@ memory-blackbox reconcile --ids-file <path>           flag store entries with no
 The ledger is **append-only**: rollbacks append new events, never edit or delete. A BLAKE3 hash-chain
 proves no row was edited; a periodically-checkpointed, signed Merkle root proves no row was removed
 (including tail truncation). Every entry is Ed25519-signed by a key the agent never sees. `verify`
-checks all three. The roadmap adds external transparency-log anchoring (Rekor-style) for high-assurance
-deployments — see [`docs/threat-model.md`](docs/threat-model.md).
+checks all three.
+
+Those three checks all read state that lives in the same file as the ledger, so they cannot detect a
+**rollback**: an attacker with raw file access deletes the recent checkpoints along with the rows they
+cover, and the shortened ledger verifies clean without any forged signature. **External anchoring**
+closes that gap by publishing each signed checkpoint to an append-only log outside the host — an
+append-only file witness on independent storage, or a Sigstore Rekor transparency log. Publication
+cannot be retracted, so a rolled-back ledger leaves behind a witness it can no longer account for.
+
+```bash
+memory-blackbox anchor --backend rekor          # publish the current checkpoint
+memory-blackbox verify --anchor --backend rekor # verify, including the external cross-check
+```
+
+Anchoring publishes hashes and counts only — never memory content. It is off by default because it
+reaches the network. See [`docs/anchoring.md`](docs/anchoring.md) for what it does and does not prove,
+and [`docs/threat-model.md`](docs/threat-model.md) for the residual risk.
 
 ## Positioning
 

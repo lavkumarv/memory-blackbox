@@ -11,7 +11,7 @@ import typer
 
 from memory_blackbox import __version__
 from memory_blackbox.capture.engine import MemoryBlackbox
-from memory_blackbox.config import Config, resolve_config
+from memory_blackbox.config import ANCHOR_BACKENDS, Config, resolve_config
 from memory_blackbox.crypto import keys
 from memory_blackbox.ledger.store import LedgerStore
 
@@ -26,6 +26,49 @@ HomeOption = Annotated[
     Path | None,
     typer.Option("--home", envvar="MEMORY_BLACKBOX_HOME", help="Profile directory."),
 ]
+BackendOption = Annotated[
+    str | None,
+    typer.Option("--backend", help=f"Anchoring backend: {' | '.join(sorted(ANCHOR_BACKENDS))}."),
+]
+WitnessOption = Annotated[
+    Path | None,
+    typer.Option("--witness-file", help="Append-only witness file (backend 'file')."),
+]
+RekorUrlOption = Annotated[
+    str | None,
+    typer.Option("--rekor-url", help="Rekor base URL (backend 'rekor')."),
+]
+
+
+def _config(home: Path | None) -> Config:
+    """Resolve configuration, reporting a bad environment value as a CLI error."""
+    try:
+        return resolve_config(home)
+    except ValueError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from exc
+
+
+def _anchor_config(
+    config: Config, backend: str | None, witness_file: Path | None, rekor_url: str | None
+) -> Config:
+    """Overlay the anchoring flags onto ``config``, validating the backend name."""
+    from dataclasses import replace
+
+    if backend is not None and backend not in ANCHOR_BACKENDS:
+        typer.secho(
+            f"Unknown anchoring backend {backend!r}; expected one of "
+            f"{', '.join(sorted(ANCHOR_BACKENDS))}.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=2)
+    return replace(
+        config,
+        anchor_backend=backend or config.anchor_backend,
+        witness_path=witness_file or config.witness_path,
+        rekor_url=rekor_url or config.rekor_url,
+    )
 
 
 def _init_profile(config: Config) -> keys.KeyPair:
@@ -62,7 +105,7 @@ def version() -> None:
 @app.command()
 def init(home: HomeOption = None) -> None:
     """Create the ledger, signing key, and profile directory."""
-    config = resolve_config(home)
+    config = _config(home)
     if config.key_path.exists():
         typer.echo(f"Profile already initialized at {config.home}")
         return
@@ -106,17 +149,115 @@ def demo() -> None:
 
 
 @app.command()
-def verify(home: HomeOption = None) -> None:
-    """Verify ledger integrity; exit nonzero on tamper."""
+def verify(
+    check_anchors: Annotated[
+        bool,
+        typer.Option("--anchor/--no-anchor", help="Also cross-check external anchors."),
+    ] = False,
+    backend: BackendOption = None,
+    witness_file: WitnessOption = None,
+    rekor_url: RekorUrlOption = None,
+    home: HomeOption = None,
+) -> None:
+    """Verify ledger integrity; exit nonzero on tamper.
+
+    Without --anchor this checks the chain and the local Merkle checkpoint, which
+    cannot detect a rollback to an earlier checkpoint by an attacker with raw file
+    access. --anchor adds the external cross-check that can.
+    """
+    from memory_blackbox.anchor.factory import build_anchor
     from memory_blackbox.query.verify import verify as verify_ledger
 
-    blackbox = _open(resolve_config(home))
-    report = verify_ledger(blackbox.ledger)
+    config = _anchor_config(_config(home), backend, witness_file, rekor_url)
+    blackbox = _open(config)
+    anchor = build_anchor(config) if check_anchors else None
+    if check_anchors and not config.anchoring:
+        typer.secho(
+            "No anchoring backend configured; pass --backend file|rekor or set "
+            "MEMORY_BLACKBOX_ANCHOR.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+    report = verify_ledger(blackbox.ledger, anchor=anchor)
     if report.ok:
         typer.secho(f"OK: {report.summary}", fg=typer.colors.GREEN)
-    else:
-        typer.secho(f"TAMPER DETECTED: {report.summary}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        return
+    typer.secho(f"TAMPER DETECTED: {report.summary}", fg=typer.colors.RED, err=True)
+    if report.anchor is not None:
+        for divergence in report.anchor.divergences[1:]:
+            typer.secho(f"  {divergence.kind}: {divergence.detail}", fg=typer.colors.RED, err=True)
+    raise typer.Exit(code=1)
+
+
+@app.command()
+def anchor(
+    backend: BackendOption = None,
+    witness_file: WitnessOption = None,
+    rekor_url: RekorUrlOption = None,
+    home: HomeOption = None,
+) -> None:
+    """Checkpoint the ledger and publish that checkpoint to an external log."""
+    from memory_blackbox.anchor.base import AnchorError
+    from memory_blackbox.anchor.factory import build_anchor
+    from memory_blackbox.anchor.verify import anchor_now
+
+    config = _anchor_config(_config(home), backend, witness_file, rekor_url)
+    if not config.anchoring:
+        typer.secho(
+            "No anchoring backend configured; pass --backend file|rekor or set "
+            "MEMORY_BLACKBOX_ANCHOR.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    blackbox = _open(config)
+    signer = keys.load(config.key_path)
+    try:
+        receipt = anchor_now(blackbox.ledger, build_anchor(config), signer)
+    except AnchorError as exc:
+        typer.secho(f"Anchoring failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.secho(f"Anchored to {receipt.backend}", fg=typer.colors.GREEN)
+    typer.echo(f"  ledger rows: {receipt.statement.leaf_count}")
+    typer.echo(f"  root:        {receipt.statement.root}")
+    typer.echo(f"  log:         {receipt.log_id}")
+    typer.echo(f"  entry:       {receipt.locator}")
+
+
+@app.command(name="anchor-status")
+def anchor_status(
+    backend: BackendOption = None,
+    witness_file: WitnessOption = None,
+    rekor_url: RekorUrlOption = None,
+    home: HomeOption = None,
+) -> None:
+    """Show what the external log witnesses for this ledger."""
+    from memory_blackbox.anchor.base import AnchorError
+    from memory_blackbox.anchor.factory import build_anchor
+    from memory_blackbox.anchor.verify import verify_anchors
+
+    config = _anchor_config(_config(home), backend, witness_file, rekor_url)
+    blackbox = _open(config)
+    try:
+        report = verify_anchors(blackbox.ledger, build_anchor(config))
+    except AnchorError as exc:
+        typer.secho(f"Could not read witnesses: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(f"backend:           {report.backend}")
+    typer.echo(f"local rows:        {report.local_rows}")
+    typer.echo(f"local checkpoints: {report.local_checkpoints}")
+    typer.echo(f"witnesses:         {report.witness_count}")
+    if report.witnessed_rows is not None:
+        typer.echo(f"witnessed rows:    {report.witnessed_rows}")
+    if report.ok:
+        typer.secho(report.summary, fg=typer.colors.GREEN)
+        return
+    for divergence in report.divergences:
+        typer.secho(f"{divergence.kind}: {divergence.detail}", fg=typer.colors.RED, err=True)
+    raise typer.Exit(code=1)
 
 
 @app.command()
@@ -129,7 +270,7 @@ def trace(
     from memory_blackbox.exporters import mermaid
     from memory_blackbox.query.trace import trace as trace_action
 
-    blackbox = _open(resolve_config(home))
+    blackbox = _open(_config(home))
     result = trace_action(blackbox.ledger, blackbox.dag, action)
     if fmt == "json":
         typer.echo(
@@ -162,7 +303,7 @@ def blast_radius_cmd(
     """Compute the blast radius of a poisoned source."""
     from memory_blackbox.query.blast_radius import blast_radius
 
-    blackbox = _open(resolve_config(home))
+    blackbox = _open(_config(home))
     affected = blast_radius(blackbox.ledger, blackbox.dag, source)
     typer.echo(f"{len(affected)} record(s) influenced by '{source}':")
     for record_id in sorted(affected):
@@ -177,7 +318,7 @@ def drift(
     """Detect belief-drift events for a topic."""
     from memory_blackbox.query.drift import drift as drift_query
 
-    blackbox = _open(resolve_config(home))
+    blackbox = _open(_config(home))
     events = drift_query(blackbox.ledger, topic)
     if not events:
         typer.echo("No drift events found.")
@@ -195,7 +336,7 @@ def timeline(
     """Show the chronological timeline of events for a topic."""
     from memory_blackbox.query.timeline import timeline as timeline_query
 
-    blackbox = _open(resolve_config(home))
+    blackbox = _open(_config(home))
     for event in timeline_query(blackbox.ledger, topic):
         typer.echo(f"{event.timestamp}  [{event.kind}]  {event.text[:80]}")
 
@@ -210,7 +351,7 @@ def rollback(
     """Plan or apply a rollback of a poisoned source and its closure."""
     from memory_blackbox.query.rollback import rollback as do_rollback
 
-    blackbox = _open(resolve_config(home))
+    blackbox = _open(_config(home))
     plan = do_rollback(
         blackbox.ledger, blackbox.dag, to, scope=scope, dry_run=not apply, reason="cli rollback"
     )
@@ -233,7 +374,7 @@ def report(
     from memory_blackbox.query.trace import trace as trace_action
     from memory_blackbox.query.verify import verify as verify_ledger
 
-    blackbox = _open(resolve_config(home))
+    blackbox = _open(_config(home))
     tr = trace_action(blackbox.ledger, blackbox.dag, incident)
     selector = tr.primary.source_id if tr.primary and tr.primary.source_id else incident
     blast = blast_radius(blackbox.ledger, blackbox.dag, selector)
@@ -272,7 +413,7 @@ def reconcile(
     """Flag backend entries that have no corresponding ledger record."""
     from memory_blackbox.adapters.base import reconcile as do_reconcile
 
-    blackbox = _open(resolve_config(home))
+    blackbox = _open(_config(home))
     backend_ids = [line.strip() for line in ids_file.read_text().splitlines() if line.strip()]
     orphans = do_reconcile(blackbox.ledger, backend_ids)
     if not orphans:

@@ -192,8 +192,20 @@ canonicalization and generates real RFC 6962 proofs, so `verify_receipt` does th
 same proof walk it would against production. What a fake cannot confirm is that
 the live service accepts this entry shape.
 
-Before relying on the public log in production, run one smoke test with a
-throwaway profile:
+That part was confirmed by hand against `https://rekor.sigstore.dev` on
+2026-09-07, using a throwaway profile and a throwaway key. The full round trip
+worked: the log accepted the `rekord` entry, `index/retrieve` found it by public
+key, the fingerprint matched the locally recomputed statement, and the stored
+inclusion proof verified offline. Truncating that ledger afterwards was then
+detected as `orphaned_witness` against the live log, while plain `verify` still
+passed. The entry is public and permanent:
+
+```
+https://rekor.sigstore.dev/api/v1/log/entries/108e9186e8c5677ab7f549e43d9b8f34f7fff81b322e14776f05a6896e67c6001946ab6bb06829d9
+```
+
+This is a point-in-time check, not a regression test — the automated suite stays
+offline. Re-run it yourself before relying on the public log in production:
 
 ```bash
 export MEMORY_BLACKBOX_HOME=$(mktemp -d)

@@ -1,11 +1,14 @@
 <div align="center">
 
+<img src="docs/assets/hero.png" alt="memory-blackbox — a flight recorder for AI agent memory: every agent memory read and write is recorded to an append-only, tamper-evident ledger, so you can trace an action to its source, see the blast radius, and roll it back." width="900">
+
 # 🛰️ memory-blackbox
 
 ### A flight recorder for AI agent memory
 
 **Trace any agent action back to the exact poisoned memory, see the blast radius, and roll it back — without changing how your agent runs.**
 
+[![PyPI](https://img.shields.io/pypi/v/memory-blackbox.svg?logo=pypi&logoColor=white)](https://pypi.org/project/memory-blackbox/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Checked with mypy](https://img.shields.io/badge/mypy-strict-2a6db2.svg)](https://mypy-lang.org/)

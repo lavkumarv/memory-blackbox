@@ -71,7 +71,9 @@ def test_inclusion_proof_out_of_range() -> None:
         inclusion_proof(_leaves(4), 10)
 
 
-def test_noop_anchor_satisfies_protocol() -> None:
+def test_noop_anchor_is_reachable_from_the_old_import_path() -> None:
+    # Anchoring moved to memory_blackbox.anchor; merkle.anchor stays a shim so
+    # 0.1.0 imports keep resolving. Behaviour is covered in tests/unit/test_anchor.py.
     anchor: Anchor = NoOpAnchor()
-    assert anchor.publish("blake3:deadbeef", 5) is None
     assert isinstance(anchor, Anchor)
+    assert anchor.name == "none"

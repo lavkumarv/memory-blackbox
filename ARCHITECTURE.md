@@ -29,7 +29,9 @@ provenance, and lets an investigator replay and reason about what happened.
    not optional; a backend whose reads we cannot observe is only half-supported.
 3. **Integrity is layered.** A hash-chain proves no row was *edited*. A signed, checkpointed Merkle
    root proves no row was *removed*. Ed25519 signatures prove *who* wrote each row. All three are
-   checked by `verify()`.
+   checked by `verify()`. All three also read state stored beside the ledger, so a fourth layer —
+   external anchoring — is what proves the ledger was not *rolled back* to an earlier checkpoint;
+   `verify(..., anchor=...)` adds it. See [`docs/anchoring.md`](docs/anchoring.md).
 4. **The signing key is privileged.** It lives in the engine/gateway and is never reachable by the
    agent. Only the public key is exposed to agent-facing surfaces.
 5. **Capture is nearly free.** Provenance must add < 1 ms to the write path. Signing and flush may be

@@ -1,38 +1,17 @@
-"""External root anchoring.
+"""Compatibility shim -- anchoring now lives in :mod:`memory_blackbox.anchor`.
 
-Once a signed Merkle root is published to an external, append-only transparency
-log (Rekor-style), even someone who fully controls the host cannot rewrite history
-without the discrepancy showing up against the public log -- that is the property
-anchoring buys.
+Anchoring outgrew a single module once it gained real backends, a receipt store,
+and its own verification pass, so it moved to a package of its own. This module
+re-exports the two names that existed here in 0.1.0 so old imports keep working.
 
-**v1 does NOT anchor.** It ships a no-op anchor and relies on the *local* signed
-checkpoint. That detects edits, gaps, and tail truncation under an attacker who
-cannot forge the signing key, but it does NOT defend against an attacker with full
-raw file access who deletes the latest checkpoint(s) and truncates the ledger back
-to an earlier checkpoint. Closing that gap requires a real external anchor; the
-``Anchor`` protocol is the seam where a Rekor/Sigstore backend plugs in.
+Note that ``Anchor`` is not the same protocol it was in 0.1.0. The old
+``publish(root_hex, leaf_count) -> str | None`` was a placeholder that could not
+express a receipt, and nothing implemented it beyond the no-op. The current
+protocol is documented in :mod:`memory_blackbox.anchor.base`.
 """
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from memory_blackbox.anchor.base import Anchor, NoOpAnchor
 
-
-@runtime_checkable
-class Anchor(Protocol):
-    """Publishes a signed Merkle root to an external transparency log."""
-
-    def publish(self, root_hex: str, leaf_count: int) -> str | None:
-        """Publish ``root_hex``; return an external receipt/locator, or ``None``."""
-        ...
-
-
-class NoOpAnchor:
-    """Local-only anchor: records nothing externally (the v1 default).
-
-    The signed checkpoint in the local ledger remains the source of truth. Swap in
-    a real transparency-log anchor without changing any caller.
-    """
-
-    def publish(self, root_hex: str, leaf_count: int) -> str | None:
-        return None
+__all__ = ["Anchor", "NoOpAnchor"]

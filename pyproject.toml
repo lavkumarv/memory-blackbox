@@ -124,6 +124,7 @@ source = [
     "memory_blackbox.crypto",
     "memory_blackbox.ledger",
     "memory_blackbox.merkle",
+    "memory_blackbox.anchor",
     "memory_blackbox.dag",
     "memory_blackbox.query",
 ]

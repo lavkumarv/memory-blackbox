@@ -17,13 +17,17 @@ explicit rather than implied.
   sidecar; `reconcile` for capture-bypass detection.
 - CLI, exporters (Markdown/Mermaid/DOT/SARIF), one-command incident demo.
 - Supply chain: signed releases (Sigstore), SLSA provenance, SBOM, Dependabot, CodeQL.
+- External anchoring: signed checkpoints published to an append-only file witness or
+  a Sigstore Rekor transparency log, with `verify --anchor` cross-checking against
+  them. Closes the rollback gap where a raw-file-access attacker truncates the
+  ledger back to an earlier local checkpoint. See [`docs/anchoring.md`](docs/anchoring.md).
 
 ## Integrity & assurance
 
-- **External transparency-log anchoring** (Rekor-style). Closes the v1 limitation
-  where a raw-file-access attacker can truncate the ledger back to an earlier local
-  checkpoint. The `Anchor` protocol is the seam; this ships a real backend.
 - **KMS/HSM-backed signing keys** for server profiles (the `load_from_kms` hook).
+- Additional anchor backends behind the same `Anchor` seam — an OpenTimestamps
+  backend (Bitcoin-attested timestamps, no inclusion-log semantics) and Rekor v2
+  once its write API is generally available.
 
 ## Privacy & compliance
 

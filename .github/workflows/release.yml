@@ -44,9 +44,13 @@ jobs:
       - name: Upload artifacts to the release
         uses: softprops/action-gh-release@v3
         with:
+          # Non-overlapping patterns: v3 fails when one file matches twice, and
+          # dist/* would also ship the .gitignore that uv build writes there.
           files: |
-            dist/*
-            dist/*.sigstore*
+            dist/*.whl
+            dist/*.tar.gz
+            dist/*.sigstore.json
+            dist/*.cdx.json
 
   provenance:
     needs: build

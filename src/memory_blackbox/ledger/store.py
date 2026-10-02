@@ -163,6 +163,20 @@ class LedgerStore:
         ).fetchone()
         return row
 
+    def last_write_hash(self, namespace: str, memory_id: str) -> str | None:
+        """Return the content_hash of the newest write for ``memory_id``, or None."""
+        row = self._conn.execute(
+            """
+            SELECT json_extract(payload_json, '$.content_hash') AS content_hash
+            FROM ledger
+            WHERE kind = 'write' AND namespace = ?
+              AND json_extract(payload_json, '$.memory_id') = ?
+            ORDER BY seq DESC LIMIT 1
+            """,
+            (namespace, memory_id),
+        ).fetchone()
+        return row["content_hash"] if row else None
+
     def rows(self) -> Iterator[sqlite3.Row]:
         """Yield all ledger rows in append (``seq``) order."""
         yield from self._conn.execute("SELECT * FROM ledger ORDER BY seq ASC")

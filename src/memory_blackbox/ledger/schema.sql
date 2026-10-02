@@ -21,6 +21,10 @@ CREATE TABLE IF NOT EXISTS ledger (
 
 CREATE INDEX IF NOT EXISTS idx_ledger_ns ON ledger(namespace);
 CREATE INDEX IF NOT EXISTS idx_ledger_kind ON ledger(kind);
+-- Latest-write-per-memory lookups (watchers and the checkpoint read check).
+CREATE INDEX IF NOT EXISTS idx_ledger_write_memory_id
+  ON ledger(namespace, json_extract(payload_json, '$.memory_id'))
+  WHERE kind = 'write';
 
 CREATE TRIGGER IF NOT EXISTS ledger_no_update
 BEFORE UPDATE ON ledger

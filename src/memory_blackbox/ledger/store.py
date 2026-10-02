@@ -10,6 +10,7 @@ the engine key, and inserts the row. The caller-visible API is synchronous.
 from __future__ import annotations
 
 import sqlite3
+import threading
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from importlib import resources
@@ -46,6 +47,7 @@ def _load_schema() -> str:
 # Whitelisted so the value can never become a SQL-injection sink (PRAGMA cannot
 # be parameterized, so it is interpolated; only these constants are accepted).
 _SYNCHRONOUS_MODES = frozenset({"OFF", "NORMAL", "FULL", "EXTRA"})
+_QUERY_BATCH = 500
 
 
 class LedgerStore:
@@ -64,7 +66,11 @@ class LedgerStore:
         self.path = str(path)
         self._signer = signer
         self._checkpoint_every = checkpoint_every
-        self._conn = sqlite3.connect(self.path)
+        # Callers such as LangGraph record from worker threads. The connection is
+        # shared across threads and every append runs under one lock, so two
+        # appends can never read the same prev_hash and fork the chain.
+        self._conn = sqlite3.connect(self.path, check_same_thread=False)
+        self._lock = threading.RLock()
         self._conn.row_factory = sqlite3.Row
         # The ledger may contain sensitive memory content; keep it owner-only.
         if self.path != ":memory:" and Path(self.path).exists():
@@ -84,6 +90,10 @@ class LedgerStore:
     # -- write path ---------------------------------------------------------
     def append(self, record: R) -> R:
         """Append ``record`` to the ledger, populating its ledger-set fields."""
+        with self._lock:
+            return self._append(record)
+
+    def _append(self, record: R) -> R:
         kind = record.kind
         record_id: str = getattr(record, _ID_FIELD[kind])
         namespace = record.namespace
@@ -128,6 +138,10 @@ class LedgerStore:
 
     def checkpoint(self) -> str:
         """Write a signed Merkle-root checkpoint over all current rows; return the root."""
+        with self._lock:
+            return self._checkpoint()
+
+    def _checkpoint(self) -> str:
         root = compute_root(self._leaves)
         root_hex = "blake3:" + root.hex()
         signature = self._signer.sign(root)
@@ -149,37 +163,61 @@ class LedgerStore:
 
     # -- read path ----------------------------------------------------------
     def last_entry_hash(self) -> str | None:
-        row = self._conn.execute(
-            "SELECT entry_hash FROM ledger ORDER BY seq DESC LIMIT 1"
-        ).fetchone()
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT entry_hash FROM ledger ORDER BY seq DESC LIMIT 1"
+            ).fetchone()
         return row["entry_hash"] if row else None
 
     def count(self) -> int:
-        return int(self._conn.execute("SELECT COUNT(*) AS n FROM ledger").fetchone()["n"])
+        with self._lock:
+            return int(self._conn.execute("SELECT COUNT(*) AS n FROM ledger").fetchone()["n"])
 
     def get(self, record_id: str) -> sqlite3.Row | None:
-        row: sqlite3.Row | None = self._conn.execute(
-            "SELECT * FROM ledger WHERE record_id = ?", (record_id,)
-        ).fetchone()
+        with self._lock:
+            row: sqlite3.Row | None = self._conn.execute(
+                "SELECT * FROM ledger WHERE record_id = ?", (record_id,)
+            ).fetchone()
         return row
 
-    def last_write_hash(self, namespace: str, memory_id: str) -> str | None:
-        """Return the content_hash of the newest write for ``memory_id``, or None."""
-        row = self._conn.execute(
-            """
-            SELECT json_extract(payload_json, '$.content_hash') AS content_hash
+    def last_write(self, namespace: str, memory_id: str) -> tuple[str, str] | None:
+        """Return ``(record_id, content_hash)`` of the newest write for ``memory_id``."""
+        with self._lock:
+            row = self._conn.execute(
+                """
+            SELECT record_id, json_extract(payload_json, '$.content_hash') AS content_hash
             FROM ledger
             WHERE kind = 'write' AND namespace = ?
               AND json_extract(payload_json, '$.memory_id') = ?
             ORDER BY seq DESC LIMIT 1
             """,
-            (namespace, memory_id),
-        ).fetchone()
-        return row["content_hash"] if row else None
+                (namespace, memory_id),
+            ).fetchone()
+        return (row["record_id"], row["content_hash"]) if row else None
+
+    def last_write_hash(self, namespace: str, memory_id: str) -> str | None:
+        """Return the content_hash of the newest write for ``memory_id``, or None."""
+        found = self.last_write(namespace, memory_id)
+        return found[1] if found else None
 
     def rows(self) -> Iterator[sqlite3.Row]:
         """Yield all ledger rows in append (``seq``) order."""
-        yield from self._conn.execute("SELECT * FROM ledger ORDER BY seq ASC")
+        yield from self.query("SELECT * FROM ledger ORDER BY seq ASC")
+
+    def query(self, sql: str, params: tuple[Any, ...] = ()) -> Iterator[sqlite3.Row]:
+        """Yield the rows of a read-only ``sql`` query, safe alongside writer threads.
+
+        Rows are fetched in batches under the ledger lock, and the lock is released
+        between batches, so a long scan never stalls the write path for its whole run.
+        """
+        with self._lock:
+            cursor = self._conn.execute(sql, params)
+        while True:
+            with self._lock:
+                batch = cursor.fetchmany(_QUERY_BATCH)
+            if not batch:
+                return
+            yield from batch
 
     def payload(self, record_id: str) -> dict[str, Any] | None:
         """Return the parsed signable payload of a record, or None if absent."""
@@ -193,6 +231,11 @@ class LedgerStore:
         """Yield each row paired with its parsed payload, in seq order."""
         for row in self.rows():
             yield row, orjson.loads(row["payload_json"])
+
+    @property
+    def lock(self) -> threading.RLock:
+        """The lock that serializes use of ``connection`` across threads."""
+        return self._lock
 
     @property
     def connection(self) -> sqlite3.Connection:

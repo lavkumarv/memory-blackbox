@@ -67,6 +67,15 @@ def test_record_write_creates_ledger_row_edges_and_runs_detectors(
     assert len(blackbox.findings) == 2
 
 
+def test_scan_text_replaces_content_for_detectors(
+    blackbox: MemoryBlackbox, detector: RecordingDetector
+) -> None:
+    record = blackbox.record_write("full snapshot", _src(), scan="only the new part")
+    blackbox.record_write("another snapshot", _src(), scan="")  # nothing new: no detection
+    assert detector.calls == ["only the new part"]
+    assert blackbox.ledger.payload(record.record_id)["content"] == "full snapshot"  # type: ignore[index]
+
+
 def test_record_retrieval_logs_query_returned_and_scores(blackbox: MemoryBlackbox) -> None:
     mem = blackbox.record_write("a fact", _src(), namespace="t")
     ret = blackbox.record_retrieval(

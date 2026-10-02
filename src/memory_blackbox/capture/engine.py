@@ -94,7 +94,14 @@ class MemoryBlackbox:
         memory_type: MemoryType = MemoryType.semantic,
         derived_from: Sequence[str] = (),
         caused_by_retrieval: Sequence[str] = (),
+        scan: str | None = None,
     ) -> ProvenanceRecord:
+        """Record a memory write.
+
+        ``scan`` is the text the detectors inspect instead of ``content``, for
+        adapters that record whole snapshots and want only the new part scanned
+        (an empty string skips detection for this write).
+        """
         size = len(content.encode("utf-8"))
         if size > self.max_content_bytes:
             raise ContentTooLargeError(
@@ -109,12 +116,14 @@ class MemoryBlackbox:
             derived_from=list(derived_from),
             caused_by_retrieval=list(caused_by_retrieval),
         )
-        self._run_detectors(record, content, namespace)
-        self.ledger.append(record)
-        for parent in record.derived_from:
-            self._add_edge(parent, record.record_id, EdgeType.DERIVED_FROM)
-        for retrieval_id in record.caused_by_retrieval:
-            self._add_edge(retrieval_id, record.record_id, EdgeType.CONTEXTUALIZED)
+        if scan != "":
+            self._run_detectors(record, content if scan is None else scan, namespace)
+        with self.ledger.lock:  # the record and its lineage edges land together
+            self.ledger.append(record)
+            for parent in record.derived_from:
+                self._add_edge(parent, record.record_id, EdgeType.DERIVED_FROM)
+            for retrieval_id in record.caused_by_retrieval:
+                self._add_edge(retrieval_id, record.record_id, EdgeType.CONTEXTUALIZED)
         return record
 
     def record_retrieval(
@@ -135,9 +144,10 @@ class MemoryBlackbox:
             session_id=session_id,
             turn_id=turn_id,
         )
-        self.ledger.append(record)
-        for memory_id in record.returned:
-            self._add_edge(memory_id, record.retrieval_id, EdgeType.RETRIEVED)
+        with self.ledger.lock:
+            self.ledger.append(record)
+            for memory_id in record.returned:
+                self._add_edge(memory_id, record.retrieval_id, EdgeType.RETRIEVED)
         return record
 
     def record_action(
@@ -158,9 +168,10 @@ class MemoryBlackbox:
             session_id=session_id,
             turn_id=turn_id,
         )
-        self.ledger.append(record)
-        for retrieval_id in record.context_retrievals:
-            self._add_edge(retrieval_id, record.action_id, EdgeType.CONTRIBUTED_TO)
+        with self.ledger.lock:
+            self.ledger.append(record)
+            for retrieval_id in record.context_retrievals:
+                self._add_edge(retrieval_id, record.action_id, EdgeType.CONTRIBUTED_TO)
         return record
 
     def wrap(

@@ -11,6 +11,12 @@ Please report suspected vulnerabilities privately via GitHub Security Advisories
 - Please include a description, reproduction steps, and impact.
 - We follow coordinated disclosure and will credit reporters who wish to be named.
 
+## Acknowledgements
+
+- **Yasha Khandelwal, [agmi](https://github.com/tech4biz-yasha/agmi)**: found that
+  the `MemoryMdAdapter` watcher trusted a memory file edited while no process
+  was running, so the edit went unreported after a restart. Fixed in 0.1.1 (#31).
+
 ## The tool's own integrity
 
 The ledger's trust model is the product:

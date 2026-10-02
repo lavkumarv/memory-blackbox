@@ -49,3 +49,38 @@ jobs:
       # Coverage gate: >=90% on the integrity-critical core packages (enabled at M1).
       - name: Test
         run: uv run pytest --cov --cov-report=term-missing --cov-fail-under=90
+
+  # The LangGraph adapter against a real PostgresSaver. Service containers only
+  # run on Linux runners, so this is its own job rather than part of the matrix.
+  langgraph-postgres:
+    name: langgraph / postgres 16
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mb
+          POSTGRES_PASSWORD: mb
+          POSTGRES_DB: mbtest
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MB_TEST_POSTGRES_URI: postgresql://mb:mb@localhost:5432/mbtest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --all-extras --python 3.12
+
+      - name: Test
+        run: uv run pytest tests/integration/test_langgraph_postgres.py -v

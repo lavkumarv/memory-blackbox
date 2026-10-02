@@ -48,8 +48,8 @@ explicit rather than implied.
 
 ## Ecosystem
 
-- Tier-2 adapters (CrewAI, LangGraph, Pinecone/Qdrant/Weaviate/Mongo native clients,
-  Vercel AI SDK).
+- Tier-2 adapters (CrewAI, Pinecone/Qdrant/Weaviate/Mongo native clients, Vercel AI SDK).
+  LangGraph shipped as `BlackboxCheckpointSaver`.
 - Detector-pack plugin discovery via entry points (the registry exists; document and
   publish the SDK).
 - Standards alignment: keep [`docs/threat-mapping.md`](docs/threat-mapping.md) current

@@ -143,3 +143,39 @@ def test_forgery_detected_with_wrong_key(store: LedgerStore) -> None:
     assert not report.ok
     assert report.divergence is not None
     assert report.divergence.kind is DivergenceKind.FORGERY
+
+
+def test_concurrent_appends_from_threads_keep_one_chain(store: LedgerStore) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(lambda i: store.append(_write(f"w{i}")), range(200)))
+    assert store.count() == 200
+    assert verify_chain(store.connection, store.public_key).ok
+
+
+def test_last_write_lookup_uses_the_memory_id_index(store: LedgerStore) -> None:
+    plan = store.connection.execute(
+        "EXPLAIN QUERY PLAN SELECT record_id FROM ledger WHERE kind = 'write' AND namespace = ? "
+        "AND json_extract(payload_json, '$.memory_id') = ? ORDER BY seq DESC LIMIT 1",
+        ("ns", "m"),
+    ).fetchall()
+    assert any("idx_ledger_write_memory_id" in row["detail"] for row in plan)
+
+
+def test_reads_alongside_writer_threads_do_not_collide(store: LedgerStore) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    def write(i: int) -> None:
+        store.append(_write(f"w{i}"))
+
+    def read(i: int) -> None:
+        store.last_write_hash("default", f"m{i}")
+        store.count()
+        sum(1 for _ in store.rows())
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = [pool.submit(write if i % 2 else read, i) for i in range(400)]
+        for future in futures:
+            future.result()  # re-raises any sqlite3 InterfaceError from a worker
+    assert verify_chain(store.connection, store.public_key).ok

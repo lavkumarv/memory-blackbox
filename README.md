@@ -128,11 +128,51 @@ memory.search("user preferences")          # captured as a retrieval, then forwa
 | **Letta** | `letta_adapter()` | archival insert | archival / recall search |
 | **pgvector** | `PgVectorCapture` | `INSERT … embedding` (explicit helpers) | `SELECT … ORDER BY embedding <=> q` |
 | **memory.md** | `MemoryMdAdapter` | file write/diff on `MEMORY.md` · `CLAUDE.md` · `AGENTS.md` | file reads |
+| **LangGraph** | `BlackboxCheckpointSaver` | `put` / `put_writes` on any checkpointer | `get_tuple` (resume) |
 | *Anything via MCP* | [MCP gateway](#2-mcp-gateway) | any memory tool call | any memory tool call |
 | *Hosted vector DBs* | [Sidecar](#3-sidecar) | upsert | query |
 
 > The `memory.md` adapter watches the CVE-2026-21852 postinstall-poisoning surface: it snapshots and
 > diffs your agent memory files and attributes any out-of-band edit to the file that changed.
+
+#### LangGraph checkpoints
+
+LangGraph agents resume from their checkpointer, so an edited checkpoint row is memory the agent will
+trust on its next step. Wrap any checkpointer and audit it (tested against SQLite, Postgres and
+in-memory; other savers use the same interface):
+
+```python
+# pip install "memory-blackbox[langgraph]"
+from langgraph.checkpoint.sqlite import SqliteSaver
+from memory_blackbox.adapters.langgraph_ import BlackboxCheckpointSaver
+
+saver = BlackboxCheckpointSaver(SqliteSaver(conn), blackbox)
+graph = builder.compile(checkpointer=saver)
+
+report = saver.audit()       # reconcile the checkpoint store with the ledger
+assert report.ok, report.issues
+```
+
+Every saved checkpoint and pending write is recorded as the store returned it. `audit()` reports
+checkpoints that were edited, forged (never recorded) or deleted. It caught all eight storage-level
+edits in the [agmi](https://github.com/tech4biz-yasha/agmi) at-rest suite, across a process restart.
+Deletions made through the wrapper (`delete_thread`, `prune`) are recorded and not flagged, and
+`copy_thread` refuses to copy a thread that fails the audit. Pass `verify_on_read=True` to make the
+resume read refuse a checkpoint that differs from the ledger, rather than only reporting it later.
+
+Operational notes:
+
+- **Cost.** Each saved checkpoint is read back, hashed and signed: about 2–3 ms per graph step on
+  SQLite with a 100-message history (10–13 ms per `invoke` against ≈2 ms unwrapped). `audit()` reads
+  the whole store, so run it from a job or on demand, not on every step.
+- **Large state.** A checkpoint bigger than the ledger's content limit (5 MiB by default) is
+  recorded as its digest plus a readable 64 KiB head, so it is still audited in full.
+- **Detectors** see only memory text that is new to the thread, so an injected message is
+  reported once, not on every later checkpoint. Each graph step still counts as a write for
+  `write_rate`, whose default (5 writes a minute per source) is tuned for memory stores; raise
+  `max_writes` for busy LangGraph threads.
+- **Read check scope.** `verify_on_read` checks the checkpoint being resumed and its pending
+  writes. Older checkpoints and deletions are caught by `audit()`.
 
 ### 2. MCP gateway
 
@@ -198,7 +238,7 @@ sidecar.handle("upsert", {"text": "...", "id": "vec-1"})   # logged + tagged + f
 ```mermaid
 flowchart LR
     A([AI agent]) -- read / write --> C{Capture}
-    C -- library wrapper --> B1[(Mem0 · Chroma · Letta<br/>pgvector · memory.md)]
+    C -- library wrapper --> B1[(Mem0 · Chroma · Letta<br/>pgvector · memory.md · LangGraph)]
     C -- MCP gateway --> B2[(any MCP<br/>memory server)]
     C -- sidecar --> B3[(Pinecone · Qdrant<br/>Weaviate · Mongo)]
     C --> L[[Append-only ledger<br/>BLAKE3 chain · Merkle root · Ed25519]]

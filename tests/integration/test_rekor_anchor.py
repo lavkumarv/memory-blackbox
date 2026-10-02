@@ -233,7 +233,8 @@ def test_the_published_entry_carries_only_the_statement_hash(
     anchor_now(store, rekor, signer)
 
     stored = fake_log.entries[0].decode()
-    assert "4111" not in stored
+    # Check the whole number: random hashes and signatures can contain "4111" by chance.
+    assert "4111 1111 1111 1111" not in stored
     assert json.loads(stored)["spec"]["data"]["hash"]["algorithm"] == "sha256"
 
 

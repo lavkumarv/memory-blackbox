@@ -4,8 +4,10 @@
 
 ## Reporting a vulnerability
 
-Please report suspected vulnerabilities privately via GitHub Security Advisories
-("Report a vulnerability") rather than a public issue.
+Please report suspected vulnerabilities privately through GitHub's private
+vulnerability reporting, not in a public issue:
+**[Report a vulnerability](https://github.com/lavkumarv/memory-blackbox/security/advisories/new)**
+(you need to be signed in to GitHub).
 
 - **Acknowledgement SLA:** within 48 hours.
 - Please include a description, reproduction steps, and impact.

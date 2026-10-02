@@ -43,39 +43,53 @@ class MemoryMdAdapter:
     def _paths(self) -> list[Path]:
         return [self._root / name for name in self._filenames]
 
-    def baseline(self) -> None:
-        """Record the current contents as the trusted baseline without flagging."""
+    def baseline(self) -> list[ProvenanceRecord]:
+        """Establish the trusted baseline for each watched file.
+
+        The ledger, not the file, is the trusted state: if it already holds a
+        write for a file, that write's hash becomes the baseline, so an edit made
+        while no process was watching is flagged by the next ``scan()``. A file
+        the ledger has never seen is recorded once, so the baseline outlives this
+        process. Returns the writes recorded for previously unseen files.
+        """
+        records: list[ProvenanceRecord] = []
         for path in self._paths():
-            if path.exists():
-                self._snapshots[str(path)] = b3(path.read_bytes())
+            if not path.exists():
+                continue
+            known = self._blackbox.ledger.last_write_hash(self._namespace, str(path))
+            if known is not None:
+                self._snapshots[str(path)] = known
+            elif (record := self._record_if_changed(path)) is not None:
+                records.append(record)
+        return records
 
     def scan(self) -> list[ProvenanceRecord]:
         """Record a write for each watched file that changed since the last scan."""
         records: list[ProvenanceRecord] = []
         for path in self._paths():
-            if not path.exists():
-                continue
-            # Don't load a hostile multi-GB memory file into memory; the engine
-            # enforces the same bound, but check before reading at all.
-            if path.stat().st_size > self._blackbox.max_content_bytes:
-                continue
-            content = path.read_text(encoding="utf-8")
-            digest = b3(content.encode("utf-8"))
-            if self._snapshots.get(str(path)) == digest:
-                continue
-            self._snapshots[str(path)] = digest
-            source = Source(
-                source_id=str(path),
-                source_type=SourceType.file_read,
-                locator=str(path),
-            )
-            records.append(
-                self._blackbox.record_write(
-                    content,
-                    source,
-                    namespace=self._namespace,
-                    memory_id=str(path),
-                    memory_type=MemoryType.procedural,
-                )
-            )
+            if path.exists() and (record := self._record_if_changed(path)) is not None:
+                records.append(record)
         return records
+
+    def _record_if_changed(self, path: Path) -> ProvenanceRecord | None:
+        # Don't load a hostile multi-GB memory file into memory; the engine
+        # enforces the same bound, but check before reading at all.
+        if path.stat().st_size > self._blackbox.max_content_bytes:
+            return None
+        content = path.read_text(encoding="utf-8")
+        digest = b3(content.encode("utf-8"))
+        if self._snapshots.get(str(path)) == digest:
+            return None
+        self._snapshots[str(path)] = digest
+        source = Source(
+            source_id=str(path),
+            source_type=SourceType.file_read,
+            locator=str(path),
+        )
+        return self._blackbox.record_write(
+            content,
+            source,
+            namespace=self._namespace,
+            memory_id=str(path),
+            memory_type=MemoryType.procedural,
+        )
